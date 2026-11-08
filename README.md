@@ -7,7 +7,7 @@ Zasady dla agentów kodujących: [CLAUDE.md](CLAUDE.md).
 | --- | --- |
 | `backend/` | FastAPI + SQLAlchemy (async) + Alembic; REST dla aplikacji, później agent i SSE |
 | `mobile/` | Expo (SDK 58, Expo Router, TypeScript strict) |
-| `mcp_server/` | Serwer MCP `finance-tools` (tydzień 2); na razie konfiguracja kategorii narzędzi |
+| `mcp_server/` | Serwer MCP `finance-tools` (FastMCP, HTTP): 9 narzędzi P1, korzysta z kodu backendu |
 | `supabase/` | Konfiguracja lokalnego Supabase (Postgres + Auth) |
 
 ## Uruchomienie lokalne
@@ -15,8 +15,8 @@ Zasady dla agentów kodujących: [CLAUDE.md](CLAUDE.md).
 Wymagania: Docker, Node 20+, [uv](https://docs.astral.sh/uv/).
 
 ```bash
-# 1. Baza i logowanie (Postgres :54322, Auth/API :54321, Studio :54323)
-npx supabase start
+# 1. Baza i logowanie (Postgres :54322, Auth/API :54321)
+npx supabase start -x studio,realtime,storage-api,imgproxy,edge-runtime,logflare,vector,postgres-meta,supavisor,mailpit
 npx supabase status          # adres API i klucz publiczny (anon / publishable)
 
 # 2. Backend
@@ -33,12 +33,38 @@ npm install
 npx expo start               # zeskanuj kod QR w Expo Go
 ```
 
+Pełny `npx supabase start` (bez `-x`) uruchamia też Studio na :54323, ale zużywa dużo więcej pamięci.
+
+## Serwer MCP
+
+```bash
+cd mcp_server
+uv sync
+uv run uvicorn finance_tools.server:app --port 8001     # endpoint: http://127.0.0.1:8001/mcp
+npx @modelcontextprotocol/inspector                       # Streamable HTTP, nagłówek Authorization: Bearer <token>
+```
+
+Token to `access_token` z logowania przez Supabase Auth (np. `POST :54321/auth/v1/token?grant_type=password`
+z nagłówkiem `apikey`). Narzędzia `propose_*` tworzą tylko propozycję; zapis następuje przez
+`POST /proposals/{id}/confirm` w backendzie.
+
+Dane przykładowe dla konta testowego (ok. 3 miesiące transakcji i 4 budżety):
+
+```bash
+cd backend
+uv run python scripts/seed_demo.py --email test1@example.com --reset   # --reset usuwa transakcje i budżety tego konta
+```
+
 ## Testy i jakość
 
 ```bash
 cd backend
 uv run pytest                # tworzy od zera bazę TEST_DATABASE_URL (domyślnie finance_test na :54322)
 uv run ruff check . && uv run mypy app tests
+
+cd ../mcp_server
+uv run pytest                # baza finance_mcp_test na :54322
+uv run ruff check . && uv run mypy finance_tools tests
 
 cd ../mobile
 npx tsc --noEmit
