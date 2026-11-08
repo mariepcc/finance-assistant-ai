@@ -218,3 +218,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Projekt
+node_modules/
+.expo/
+mobile/ios/
+mobile/android/
+supabase/.temp/
+supabase/.branches/
+.DS_Store
