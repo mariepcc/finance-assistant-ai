@@ -227,3 +227,4 @@ mobile/android/
 supabase/.temp/
 supabase/.branches/
 .DS_Store
+docs/specyfikacja.md

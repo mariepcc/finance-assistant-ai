@@ -1,7 +1,7 @@
 # Asystent finansowy AI
 
 Mobilna aplikacja do finansów osobistych z asystentem AI (praca inżynierska).
-Specyfikacja: [docs/specyfikacja.md](docs/specyfikacja.md). Zasady dla agentów kodujących: [CLAUDE.md](CLAUDE.md).
+Zasady dla agentów kodujących: [CLAUDE.md](CLAUDE.md).
 
 | Katalog | Zawartość |
 | --- | --- |
