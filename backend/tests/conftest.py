@@ -75,10 +75,23 @@ async def client(session_factory: async_sessionmaker[AsyncSession]) -> AsyncIter
         yield c
 
 
-def make_token(user_id: uuid.UUID, *, secret: str = JWT_SECRET, aud: str = "authenticated") -> str:
+def make_token(
+    user_id: uuid.UUID,
+    *,
+    secret: str = JWT_SECRET,
+    aud: str = "authenticated",
+    iss: str = "http://127.0.0.1:54321/auth/v1",
+) -> str:
     now = int(time.time())
     return jwt.encode(
-        {"sub": str(user_id), "aud": aud, "role": "authenticated", "iat": now, "exp": now + 3600},
+        {
+            "sub": str(user_id),
+            "aud": aud,
+            "iss": iss,
+            "role": "authenticated",
+            "iat": now,
+            "exp": now + 3600,
+        },
         secret,
         algorithm="HS256",
     )
@@ -102,5 +115,22 @@ async def onboarded(client: AsyncClient, auth: AuthHeaders) -> Onboarded:
         assert r.status_code == 200, r.text
         cats = (await client.get("/categories", headers=headers)).json()
         return headers, {c["name"]: c["id"] for c in cats}
+
+    return _make
+
+
+UserCtx = tuple[uuid.UUID, dict[str, str], dict[str, str]]
+MakeUser = Callable[[], Awaitable[UserCtx]]
+
+
+@pytest.fixture
+async def make_user(client: AsyncClient, auth: AuthHeaders) -> MakeUser:
+    async def _make() -> UserCtx:
+        uid = uuid.uuid4()
+        headers = auth(uid)
+        r = await client.post("/me/consent", json={"accepted": True}, headers=headers)
+        assert r.status_code == 200, r.text
+        cats = (await client.get("/categories", headers=headers)).json()
+        return uid, headers, {c["name"]: c["id"] for c in cats}
 
     return _make

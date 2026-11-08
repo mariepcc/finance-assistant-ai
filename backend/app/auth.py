@@ -20,8 +20,8 @@ class CurrentUser:
 
 
 @lru_cache
-def _jwks_client(supabase_url: str) -> jwt.PyJWKClient:
-    return jwt.PyJWKClient(f"{supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json")
+def _jwks_client(jwks_uri: str) -> jwt.PyJWKClient:
+    return jwt.PyJWKClient(jwks_uri)
 
 
 async def decode_token(token: str, settings: Settings) -> dict[str, Any]:
@@ -30,12 +30,17 @@ async def decode_token(token: str, settings: Settings) -> dict[str, Any]:
         algorithms = ["HS256"]
     else:
         signing_key = await run_in_threadpool(
-            _jwks_client(settings.supabase_url).get_signing_key_from_jwt, token
+            _jwks_client(settings.jwks_uri).get_signing_key_from_jwt, token
         )
         key = signing_key.key
         algorithms = ["ES256", "RS256"]
     claims: dict[str, Any] = jwt.decode(
-        token, key, algorithms=algorithms, audience=settings.jwt_audience
+        token,
+        key,
+        algorithms=algorithms,
+        audience=settings.jwt_audience,
+        issuer=settings.jwt_issuer,
+        options={"require": ["exp", "sub", "aud", "iss"]},
     )
     return claims
 

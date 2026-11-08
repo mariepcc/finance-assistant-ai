@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["*"]
     default_currency: str = "PLN"
 
+    @property
+    def jwt_issuer(self) -> str:
+        return f"{self.supabase_url.rstrip('/')}/auth/v1"
+
+    @property
+    def jwks_uri(self) -> str:
+        return f"{self.jwt_issuer}/.well-known/jwks.json"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -2,14 +2,23 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import categories, me, transactions
+from app.api import categories, me, proposals, transactions
 from app.config import get_settings
-from app.errors import ConsentRequiredError, DomainError, InvalidInputError, NotFoundError
+from app.errors import (
+    ConflictError,
+    ConsentRequiredError,
+    DomainError,
+    GoneError,
+    InvalidInputError,
+    NotFoundError,
+)
 
 _STATUS: dict[type[DomainError], int] = {
     NotFoundError: 404,
     InvalidInputError: 422,
     ConsentRequiredError: 403,
+    ConflictError: 409,
+    GoneError: 410,
 }
 
 
@@ -30,6 +39,7 @@ def create_app() -> FastAPI:
     app.include_router(me.router)
     app.include_router(categories.router)
     app.include_router(transactions.router)
+    app.include_router(proposals.router)
 
     @app.get("/health", tags=["system"])
     async def health() -> dict[str, str]:

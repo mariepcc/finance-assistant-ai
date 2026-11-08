@@ -2,9 +2,11 @@ import base64
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, select, tuple_
+from sqlalchemy import ColumnElement, Select, case, func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Transaction, TransactionType
@@ -17,6 +19,8 @@ class TransactionFilters:
     type: TransactionType | None = None
     category_id: UUID | None = None
     query: str | None = None
+    min_amount: Decimal | None = None
+    max_amount: Decimal | None = None
 
 
 def encode_cursor(tx: Transaction) -> str:
@@ -33,7 +37,7 @@ def _escape_like(value: str) -> str:
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def _apply_filters(stmt: Select[Transaction], f: TransactionFilters) -> Select[Transaction]:
+def _apply_filters[S: Select[*tuple[Any, ...]]](stmt: S, f: TransactionFilters) -> S:
     if f.date_from is not None:
         stmt = stmt.where(Transaction.occurred_on >= f.date_from)
     if f.date_to is not None:
@@ -42,6 +46,10 @@ def _apply_filters(stmt: Select[Transaction], f: TransactionFilters) -> Select[T
         stmt = stmt.where(Transaction.type == f.type)
     if f.category_id is not None:
         stmt = stmt.where(Transaction.category_id == f.category_id)
+    if f.min_amount is not None:
+        stmt = stmt.where(Transaction.amount >= f.min_amount)
+    if f.max_amount is not None:
+        stmt = stmt.where(Transaction.amount <= f.max_amount)
     if f.query:
         stmt = stmt.where(Transaction.note.ilike(f"%{_escape_like(f.query)}%", escape="\\"))
     return stmt
@@ -65,6 +73,35 @@ async def list_for_user(
     has_more = len(rows) > limit
     items = rows[:limit]
     return items, (encode_cursor(items[-1]) if has_more else None)
+
+
+@dataclass(frozen=True, slots=True)
+class FilteredTotals:
+    count: int
+    income: Decimal
+    expense: Decimal
+
+
+async def summarize_for_user(
+    session: AsyncSession, user_id: UUID, filters: TransactionFilters
+) -> FilteredTotals:
+    def total(tx_type: TransactionType) -> ColumnElement[Decimal]:
+        return func.coalesce(
+            func.sum(case((Transaction.type == tx_type, Transaction.amount), else_=0)), 0
+        )
+
+    stmt = select(
+        func.count(Transaction.id),
+        total(TransactionType.INCOME),
+        total(TransactionType.EXPENSE),
+    ).where(Transaction.user_id == user_id)
+    stmt = _apply_filters(stmt, filters)
+    count, income, expense = (await session.execute(stmt)).one()
+    return FilteredTotals(
+        count=count,
+        income=Decimal(income) + Decimal("0.00"),
+        expense=Decimal(expense) + Decimal("0.00"),
+    )
 
 
 async def get_for_user(session: AsyncSession, user_id: UUID, tx_id: UUID) -> Transaction | None:

@@ -20,6 +20,7 @@ async def test_rejects_bad_tokens(client: AsyncClient) -> None:
     for token in (
         make_token(uid, secret="inny-sekret-tez-dlugi-na-32-bajty!!"),
         make_token(uid, aud="anon"),
+        make_token(uid, iss="https://evil.example.com/auth/v1"),
         "nie-jwt",
     ):
         r = await client.get("/me", headers={"Authorization": f"Bearer {token}"})

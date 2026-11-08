@@ -14,3 +14,11 @@ class InvalidInputError(DomainError):
 
 class ConsentRequiredError(DomainError):
     pass
+
+
+class ConflictError(DomainError):
+    pass
+
+
+class GoneError(DomainError):
+    pass

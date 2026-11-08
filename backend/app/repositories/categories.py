@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import exists, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Category, TransactionType
@@ -21,6 +21,19 @@ async def get_for_user(session: AsyncSession, user_id: UUID, category_id: UUID) 
     return await session.scalar(
         select(Category).where(Category.id == category_id, Category.user_id == user_id)
     )
+
+
+async def get_by_name(
+    session: AsyncSession, user_id: UUID, name: str, kind: TransactionType | None = None
+) -> Category | None:
+    stmt = select(Category).where(
+        Category.user_id == user_id,
+        Category.archived_at.is_(None),
+        func.lower(Category.name) == name.strip().lower(),
+    )
+    if kind is not None:
+        stmt = stmt.where(Category.kind == kind)
+    return (await session.scalars(stmt.order_by(Category.kind))).first()
 
 
 async def user_has_any(session: AsyncSession, user_id: UUID) -> bool:
