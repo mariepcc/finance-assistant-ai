@@ -11,6 +11,8 @@ dependencies = [
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
     "pyjwt[crypto]>=2.10",
+    "anthropic>=2.6.0",
+    "fastmcp==4.1.*",
 ]
 
 [dependency-groups]

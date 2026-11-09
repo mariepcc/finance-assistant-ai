@@ -1,5 +1,7 @@
 import asyncio
 import os
+import socket
+import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
@@ -8,10 +10,12 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import jwt
 import pytest
+import uvicorn
 from alembic import command
 from alembic.config import Config
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.db import get_engine, get_sessionmaker
 from app.models import Budget, Category, Transaction, TransactionType
 from app.repositories import profiles as profiles_repo
@@ -31,6 +35,21 @@ TEST_DATABASE_URL = os.environ.get(
 )
 BACKEND_DIR = Path(__file__).resolve().parents[2] / "backend"
 TABLES = "transactions, budgets, proposals, categories, profiles"
+JWT_SECRET = "mcp-test-secret-at-least-32-bytes!!"
+JWT_ISSUER = "http://127.0.0.1:54321/auth/v1"
+
+
+def make_token(user_id: uuid.UUID, secret: str = JWT_SECRET, iss: str = JWT_ISSUER) -> str:
+    now = int(time.time())
+    claims: dict[str, Any] = {
+        "sub": str(user_id),
+        "aud": "authenticated",
+        "iss": iss,
+        "role": "authenticated",
+        "iat": now,
+        "exp": now + 600,
+    }
+    return jwt.encode(claims, secret, algorithm="HS256")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -151,3 +170,18 @@ async def call(client: Client[Any], tool: str, **args: Any) -> dict[str, Any]:
     result = await client.call_tool(tool, args)
     assert result.structured_content is not None
     return result.structured_content
+
+
+@pytest.fixture(scope="session")
+async def server_url(database: None) -> AsyncIterator[str]:
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+    app = create_server(Settings(supabase_jwt_secret=JWT_SECRET)).http_app()
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
+    task = asyncio.create_task(server.serve())
+    while not server.started:
+        await asyncio.sleep(0.02)
+    yield f"http://127.0.0.1:{port}"
+    server.should_exit = True
+    await task

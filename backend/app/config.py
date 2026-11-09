@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +15,17 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["*"]
     default_currency: str = "PLN"
+
+    anthropic_api_key: SecretStr | None = None
+    mcp_url: str = "http://127.0.0.1:8001/mcp"
+    router_model: str = "claude-haiku-5-5"
+    worker_model: str = "claude-haiku-5-5"
+    editor_model: str = "claude-haiku-5-5"
+    router_effort: str = "low"
+    worker_effort: str = "medium"
+    agent_max_steps: int = 6
+    agent_timeout_s: float = 60.0
+    chat_history_limit: int = 6
 
     @property
     def jwt_issuer(self) -> str:

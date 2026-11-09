@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Annotated, Any
 from uuid import UUID
@@ -17,6 +17,7 @@ _bearer = HTTPBearer(auto_error=False)
 class CurrentUser:
     id: UUID
     email: str | None
+    access_token: str = field(default="", repr=False)
 
 
 @lru_cache
@@ -58,7 +59,11 @@ async def get_current_user(
         raise unauthorized
     try:
         claims = await decode_token(credentials.credentials, settings)
-        return CurrentUser(id=UUID(claims["sub"]), email=claims.get("email"))
+        return CurrentUser(
+            id=UUID(claims["sub"]),
+            email=claims.get("email"),
+            access_token=credentials.credentials,
+        )
     except (jwt.PyJWTError, KeyError, ValueError) as exc:
         raise unauthorized from exc
 

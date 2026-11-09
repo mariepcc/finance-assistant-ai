@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 import jwt
 import pytest
 from alembic.config import Config
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import make_url, text
 from sqlalchemy.ext.asyncio import (
@@ -62,15 +63,22 @@ async def session_factory(engine: AsyncEngine) -> AsyncIterator[async_sessionmak
 
 
 @pytest.fixture
-async def client(session_factory: async_sessionmaker[AsyncSession]) -> AsyncIterator[AsyncClient]:
-    app = create_app()
+def app(session_factory: async_sessionmaker[AsyncSession]) -> FastAPI:
+    application = create_app()
 
     async def _session() -> AsyncIterator[AsyncSession]:
         async with session_factory() as s:
             yield s
 
-    app.dependency_overrides[get_settings] = lambda: Settings(supabase_jwt_secret=JWT_SECRET)
-    app.dependency_overrides[get_session] = _session
+    application.dependency_overrides[get_settings] = lambda: Settings(
+        supabase_jwt_secret=JWT_SECRET, anthropic_api_key=None
+    )
+    application.dependency_overrides[get_session] = _session
+    return application
+
+
+@pytest.fixture
+async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
 

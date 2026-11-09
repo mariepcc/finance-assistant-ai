@@ -55,6 +55,22 @@ cd backend
 uv run python scripts/seed_demo.py --email test1@example.com --reset   # --reset usuwa transakcje i budżety tego konta
 ```
 
+## Czat z asystentem
+
+Czat potrzebuje trzech procesów: Supabase, serwera MCP (`:8001`) i backendu (`:8000`), oraz klucza API
+modelu w `backend/.env`:
+
+```bash
+ANTHROPIC_API_KEY=...        # z https://platform.claude.com, nigdy w repozytorium
+MCP_URL=http://127.0.0.1:8001/mcp
+```
+
+`POST /chat` zwraca strumień SSE (`status`, `proposal`, `token`, `done`, `error`). Agent działa tak:
+router (Claude Haiku 5.5, wyjście strukturalne) wybiera 1–2 grupy narzędzi, workery (`run_worker`)
+wywołują narzędzia MCP z tokenem użytkownika, redaktor scala dwie odpowiedzi, a kod sprawdza, czy każda
+liczba w odpowiedzi występuje w wynikach narzędzi (jedna poprawka, potem uczciwy komunikat). Modele,
+`effort` i limity kroków są w `app/config.py`. Bez klucza czat odpowiada komunikatem o braku klucza.
+
 ## Testy i jakość
 
 ```bash
