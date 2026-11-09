@@ -2,6 +2,7 @@ import { env } from './env';
 import { supabase } from './supabase';
 import type {
   Category,
+  ConfirmResult,
   Profile,
   Transaction,
   TransactionFilters,
@@ -19,7 +20,7 @@ export class ApiError extends Error {
   }
 }
 
-function detailMessage(body: unknown, status: number): string {
+export function detailMessage(body: unknown, status: number): string {
   const detail = (body as { detail?: unknown } | null)?.detail;
   if (typeof detail === 'string') return detail;
   if (Array.isArray(detail)) return 'Nieprawidłowe dane formularza';
@@ -66,4 +67,7 @@ export const api = {
   updateTransaction: (id: string, input: Partial<TransactionInput>) =>
     request<Transaction>(`/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
   deleteTransaction: (id: string) => request<void>(`/transactions/${id}`, { method: 'DELETE' }),
+  confirmProposal: (id: string) =>
+    request<ConfirmResult>(`/proposals/${id}/confirm`, { method: 'POST' }),
+  rejectProposal: (id: string) => request<unknown>(`/proposals/${id}/reject`, { method: 'POST' }),
 };

@@ -81,3 +81,12 @@ export function useDeleteTransaction() {
     },
   });
 }
+
+export function useConfirmProposal() {
+  const invalidate = useInvalidateTransactions();
+  return useMutation({ mutationFn: api.confirmProposal, onSuccess: invalidate });
+}
+
+export function useRejectProposal() {
+  return useMutation({ mutationFn: api.rejectProposal });
+}

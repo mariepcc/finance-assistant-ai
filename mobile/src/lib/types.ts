@@ -49,3 +49,59 @@ export interface TransactionFilters {
   category_id?: string;
   q?: string;
 }
+
+export interface ProposedItem {
+  type: TransactionType;
+  amount: string;
+  currency: string;
+  category: string;
+  occurred_on: string;
+  note: string | null;
+}
+
+export type Proposal =
+  | {
+      kind: 'transaction';
+      proposal_id: string;
+      expires_at: string;
+      items: ProposedItem[];
+    }
+  | {
+      kind: 'budget';
+      proposal_id: string;
+      expires_at: string;
+      category: string;
+      currency: string;
+      amount: string;
+      previous_amount: string | null;
+    };
+
+export interface ConfirmResult {
+  transactions: Transaction[];
+}
+
+export interface ChatDone {
+  categories: string[];
+  verified: boolean;
+  steps: number;
+  input_tokens: number;
+  output_tokens: number;
+}
+
+export type ChatEvent =
+  | { type: 'status'; data: { text: string } }
+  | { type: 'proposal'; data: Proposal }
+  | { type: 'token'; data: { text: string } }
+  | { type: 'done'; data: ChatDone }
+  | { type: 'error'; data: { message: string } };
+
+export interface ChatTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatRequest {
+  message: string;
+  history: ChatTurn[];
+  previous_categories: string[];
+}
