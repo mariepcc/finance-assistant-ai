@@ -5,7 +5,7 @@ from fastapi import APIRouter
 from app.api.deps import SessionDep
 from app.auth import CurrentUserDep
 from app.errors import GoneError
-from app.schemas.proposal import BudgetOut, ConfirmOut, ProposalOut
+from app.schemas.proposal import BudgetOut, ConfirmIn, ConfirmOut, ProposalOut
 from app.schemas.transaction import TransactionOut
 from app.services import proposals as proposals_service
 
@@ -14,10 +14,13 @@ router = APIRouter(prefix="/proposals", tags=["propozycje"])
 
 @router.post("/{proposal_id}/confirm", response_model=ConfirmOut)
 async def confirm_proposal(
-    proposal_id: UUID, user: CurrentUserDep, session: SessionDep
+    proposal_id: UUID,
+    user: CurrentUserDep,
+    session: SessionDep,
+    edits: ConfirmIn | None = None,
 ) -> ConfirmOut:
     try:
-        result = await proposals_service.confirm(session, user.id, proposal_id)
+        result = await proposals_service.confirm(session, user.id, proposal_id, edits)
     except GoneError:
         await session.commit()
         raise

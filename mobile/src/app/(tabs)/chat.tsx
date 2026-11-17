@@ -1,5 +1,5 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { type ComponentRef, useRef, useState } from 'react';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { type ComponentRef, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -10,29 +10,27 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
+} from "react-native";
 
-import { ProposalCard } from '@/components/ProposalCard';
-import { colors, radius, spacing } from '@/components/theme';
-import { Chip } from '@/components/ui';
-import { type AssistantItem, type ChatItem, useChat } from '@/hooks/useChat';
+import { ProposalCard } from "@/components/ProposalCard";
+import { colors, radius, spacing } from "@/components/theme";
+import { Chip } from "@/components/ui";
+import { type AssistantItem, type ChatItem, useChat } from "@/hooks/useChat";
 
 const EXAMPLES = [
-  'Kawa 14 zł i bilet 4,40',
-  'Ile wydałam w tym miesiącu na jedzenie?',
-  'Jak stoją moje budżety?',
-  'Porównaj wydatki z poprzednim miesiącem',
+  "Kawa 14 zł i bilet 4,40",
+  "Ile wydałam w tym miesiącu na jedzenie?",
+  "Jak stoją moje budżety?",
+  "Porównaj wydatki z poprzednim miesiącem",
 ];
 const HEADER_OFFSET = 100;
 
 function AssistantBubble({
   item,
   onProposalState,
-  onCorrect,
 }: {
   item: AssistantItem;
-  onProposalState: ReturnType<typeof useChat>['setProposalState'];
-  onCorrect: () => void;
+  onProposalState: ReturnType<typeof useChat>["setProposalState"];
 }) {
   return (
     <View style={styles.assistantRow}>
@@ -52,8 +50,9 @@ function AssistantBubble({
           key={proposal.proposal_id}
           proposal={proposal}
           state={state}
-          onStateChange={(next) => onProposalState(proposal.proposal_id, next)}
-          onCorrect={onCorrect}
+          onStateChange={(next, updated) =>
+            onProposalState(proposal.proposal_id, next, updated)
+          }
         />
       ))}
       {item.error ? <Text style={styles.error}>{item.error}</Text> : null}
@@ -63,34 +62,30 @@ function AssistantBubble({
 
 export default function ChatScreen() {
   const { items, sending, send, setProposalState, reset } = useChat();
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState("");
   const list = useRef<FlatList<ChatItem>>(null);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
 
   const submit = (text: string) => {
     if (!text.trim() || sending) return;
-    setDraft('');
+    setDraft("");
     void send(text);
   };
 
   const renderItem = ({ item }: { item: ChatItem }) =>
-    item.role === 'user' ? (
+    item.role === "user" ? (
       <View style={[styles.bubble, styles.userBubble]}>
         <Text style={styles.userText}>{item.text}</Text>
       </View>
     ) : (
-      <AssistantBubble
-        item={item}
-        onProposalState={setProposalState}
-        onCorrect={() => input.current?.focus()}
-      />
+      <AssistantBubble item={item} onProposalState={setProposalState} />
     );
 
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? HEADER_OFFSET : 0}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? HEADER_OFFSET : 0}
     >
       <FlatList
         ref={list}
@@ -99,13 +94,15 @@ export default function ChatScreen() {
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
-        onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
+        onContentSizeChange={() =>
+          list.current?.scrollToEnd({ animated: true })
+        }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>Zapytaj o swoje finanse</Text>
             <Text style={styles.emptyText}>
-              Napisz wydatek zwykłym zdaniem albo zadaj pytanie. Zapis następuje dopiero po
-              potwierdzeniu.
+              Napisz wydatek zwykłym zdaniem albo zadaj pytanie. Zapis następuje
+              dopiero po potwierdzeniu.
             </Text>
             <View style={styles.examples}>
               {EXAMPLES.map((example) => (
@@ -164,27 +161,42 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   list: { padding: spacing.md, gap: spacing.sm, flexGrow: 1 },
-  bubble: { borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10, maxWidth: '85%' },
-  userBubble: { alignSelf: 'flex-end', backgroundColor: colors.primary },
+  bubble: {
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    maxWidth: "85%",
+  },
+  userBubble: { alignSelf: "flex-end", backgroundColor: colors.primary },
   userText: { color: colors.primaryText, fontSize: 16 },
-  assistantRow: { alignSelf: 'stretch' },
+  assistantRow: { alignSelf: "stretch" },
   assistantBubble: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
   },
   assistantText: { color: colors.text, fontSize: 16, lineHeight: 22 },
-  status: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 6 },
+  status: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: 6,
+  },
   statusText: { color: colors.muted, fontSize: 14 },
   error: { color: colors.danger, fontSize: 14, marginTop: spacing.xs },
-  empty: { flex: 1, justifyContent: 'center', gap: spacing.md, paddingVertical: spacing.lg },
-  emptyTitle: { fontSize: 20, fontWeight: '600', color: colors.text },
+  empty: {
+    flex: 1,
+    justifyContent: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
+  },
+  emptyTitle: { fontSize: 20, fontWeight: "600", color: colors.text },
   emptyText: { fontSize: 15, color: colors.muted, lineHeight: 21 },
-  examples: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  examples: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "flex-end",
     gap: spacing.sm,
     padding: spacing.sm,
     borderTopWidth: 1,
@@ -210,7 +222,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     width: 40,
     height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

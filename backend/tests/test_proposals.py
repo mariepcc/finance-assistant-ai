@@ -144,3 +144,114 @@ async def test_budget_proposal_creates_then_updates(
     async with session_factory() as s:
         with pytest.raises(InvalidInputError):
             await svc.propose_budget(s, uid, "Wynagrodzenie", Decimal("100.00"))
+
+
+async def test_confirm_with_edited_items(
+    client: AsyncClient, make_user: MakeUser, session_factory: Factory
+) -> None:
+    uid, headers, cats = await make_user()
+    async with session_factory() as s:
+        proposal = await svc.propose_transactions(
+            s, uid, [_item(), _item(amount="4.40", category="Rozrywka", note="bilet")]
+        )
+        await s.commit()
+
+    edited = [
+        {
+            "type": "expense",
+            "amount": "4.40",
+            "category_id": cats["Transport"],
+            "occurred_on": "2026-11-07",
+            "note": " bilet na autobus ",
+        }
+    ]
+    r = await client.post(
+        f"/proposals/{proposal.id}/confirm", json={"items": edited}, headers=headers
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert [
+        (t["amount"], t["category_id"], t["occurred_on"], t["note"]) for t in body["transactions"]
+    ] == [("4.40", cats["Transport"], "2026-11-07", "bilet na autobus")]
+    payload = body["proposal"]["payload"]
+    assert payload["items"][0]["category"] == "Transport"
+    assert [i["category"] for i in payload["original_items"]] == ["Jedzenie", "Rozrywka"]
+    assert await _count(session_factory, Transaction) == 1
+
+
+async def test_unchanged_edit_keeps_payload_clean(
+    client: AsyncClient, make_user: MakeUser, session_factory: Factory
+) -> None:
+    uid, headers, cats = await make_user()
+    async with session_factory() as s:
+        proposal = await svc.propose_transactions(s, uid, [_item()])
+        await s.commit()
+    same = [
+        {
+            "type": "expense",
+            "amount": "14",
+            "category_id": cats["Jedzenie"],
+            "occurred_on": "2026-11-08",
+            "note": "kawa",
+        }
+    ]
+    r = await client.post(
+        f"/proposals/{proposal.id}/confirm", json={"items": same}, headers=headers
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["proposal"]["payload"]["original_items"] is None
+
+
+async def test_edit_rejects_wrong_category_and_keeps_proposal_pending(
+    client: AsyncClient, make_user: MakeUser, session_factory: Factory
+) -> None:
+    uid, headers, cats = await make_user()
+    _, _, other_cats = await make_user()
+    async with session_factory() as s:
+        proposal = await svc.propose_transactions(s, uid, [_item()])
+        await s.commit()
+
+    def body(category_id: str, kind: str = "expense") -> dict[str, object]:
+        item = {
+            "type": kind,
+            "amount": "14.00",
+            "category_id": category_id,
+            "occurred_on": "2026-11-08",
+        }
+        return {"items": [item]}
+
+    url = f"/proposals/{proposal.id}/confirm"
+    assert (
+        await client.post(url, json=body(cats["Wynagrodzenie"]), headers=headers)
+    ).status_code == 422
+    assert (
+        await client.post(url, json=body(other_cats["Jedzenie"]), headers=headers)
+    ).status_code == 422
+    assert (await client.post(url, json={"items": []}, headers=headers)).status_code == 422
+    assert (await client.post(url, json={"amount": "5.00"}, headers=headers)).status_code == 422
+    assert (
+        await client.post(url, json=body(cats["Wynagrodzenie"], "income"), headers=headers)
+    ).status_code == 200
+    assert await _count(session_factory, Transaction) == 1
+
+
+async def test_confirm_budget_with_edited_amount(
+    client: AsyncClient, make_user: MakeUser, session_factory: Factory
+) -> None:
+    uid, headers, cats = await make_user()
+    async with session_factory() as s:
+        proposal = await svc.propose_budget(s, uid, "Jedzenie", Decimal("800.00"))
+        await s.commit()
+    url = f"/proposals/{proposal.id}/confirm"
+    item = {
+        "type": "expense",
+        "amount": "1",
+        "category_id": cats["Jedzenie"],
+        "occurred_on": "2026-11-08",
+    }
+    assert (await client.post(url, json={"items": [item]}, headers=headers)).status_code == 422
+    r = await client.post(url, json={"amount": "650.00"}, headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["budget"]["amount"] == "650.00"
+    payload = r.json()["proposal"]["payload"]
+    assert (payload["amount"], payload["original_amount"]) == ("650.00", "800.00")

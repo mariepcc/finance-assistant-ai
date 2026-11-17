@@ -32,6 +32,8 @@ from app.repositories import proposals as proposals_repo
 from app.repositories import transactions as tx_repo
 from app.schemas.proposal import (
     BudgetProposalPayload,
+    ConfirmIn,
+    EditedTransaction,
     ProposedTransaction,
     TransactionProposalItem,
     TransactionProposalPayload,
@@ -135,10 +137,45 @@ async def _pending(session: AsyncSession, user_id: UUID, proposal_id: UUID) -> P
     return proposal
 
 
+async def _apply_item_edits(
+    session: AsyncSession,
+    user_id: UUID,
+    payload: TransactionProposalPayload,
+    edited: list[EditedTransaction],
+) -> TransactionProposalPayload:
+    currency = payload.items[0].currency
+    items = []
+    for item in edited:
+        category = await categories_repo.get_for_user(session, user_id, item.category_id)
+        if category is None or category.archived_at is not None or category.kind != item.type:
+            raise InvalidInputError("Wybrana kategoria nie pasuje do typu transakcji")
+        items.append(
+            TransactionProposalItem(
+                type=item.type,
+                amount=item.amount,
+                currency=currency,
+                category_id=category.id,
+                category=category.name,
+                occurred_on=item.occurred_on,
+                note=(item.note or "").strip() or None,
+            )
+        )
+    if items == payload.items:
+        return payload
+    return TransactionProposalPayload(
+        items=items, original_items=payload.original_items or payload.items
+    )
+
+
 async def _confirm_transactions(
-    session: AsyncSession, user_id: UUID, proposal: Proposal
+    session: AsyncSession, user_id: UUID, proposal: Proposal, edits: ConfirmIn | None
 ) -> list[Transaction]:
     payload = TransactionProposalPayload.model_validate(proposal.payload)
+    if edits is not None and edits.amount is not None:
+        raise InvalidInputError("Kwotę budżetu można zmienić tylko w propozycji budżetu")
+    if edits is not None and edits.items is not None:
+        payload = await _apply_item_edits(session, user_id, payload, edits.items)
+        proposal.payload = payload.model_dump(mode="json")
     created = []
     for item in payload.items:
         category = await categories_repo.get_for_user(session, user_id, item.category_id)
@@ -163,8 +200,17 @@ async def _confirm_transactions(
     return created
 
 
-async def _confirm_budget(session: AsyncSession, user_id: UUID, proposal: Proposal) -> Budget:
+async def _confirm_budget(
+    session: AsyncSession, user_id: UUID, proposal: Proposal, edits: ConfirmIn | None
+) -> Budget:
     payload = BudgetProposalPayload.model_validate(proposal.payload)
+    if edits is not None and edits.items is not None:
+        raise InvalidInputError("Pozycje można zmienić tylko w propozycji transakcji")
+    if edits is not None and edits.amount is not None and edits.amount != payload.amount:
+        payload = payload.model_copy(
+            update={"amount": edits.amount, "original_amount": payload.amount}
+        )
+        proposal.payload = payload.model_dump(mode="json")
     category = await categories_repo.get_for_user(session, user_id, payload.category_id)
     if category is None or category.archived_at is not None:
         raise InvalidInputError(f"Kategoria „{payload.category}” nie jest już dostępna")
@@ -187,13 +233,15 @@ async def _confirm_budget(session: AsyncSession, user_id: UUID, proposal: Propos
     return budget
 
 
-async def confirm(session: AsyncSession, user_id: UUID, proposal_id: UUID) -> ConfirmResult:
+async def confirm(
+    session: AsyncSession, user_id: UUID, proposal_id: UUID, edits: ConfirmIn | None = None
+) -> ConfirmResult:
     proposal = await _pending(session, user_id, proposal_id)
     result = ConfirmResult(proposal=proposal)
     if proposal.kind == ProposalKind.TRANSACTION:
-        result.transactions = await _confirm_transactions(session, user_id, proposal)
+        result.transactions = await _confirm_transactions(session, user_id, proposal, edits)
     else:
-        result.budget = await _confirm_budget(session, user_id, proposal)
+        result.budget = await _confirm_budget(session, user_id, proposal, edits)
     proposal.status = ProposalStatus.CONFIRMED
     proposal.confirmed_at = datetime.now(UTC)
     await session.flush()

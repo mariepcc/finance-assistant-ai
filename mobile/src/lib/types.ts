@@ -1,5 +1,4 @@
-
-export type TransactionType = 'expense' | 'income';
+export type TransactionType = "expense" | "income";
 
 export interface Profile {
   id: string;
@@ -25,7 +24,7 @@ export interface Transaction {
   category_id: string;
   occurred_on: string;
   note: string | null;
-  source: 'manual' | 'assistant';
+  source: "manual" | "assistant";
   created_at: string;
 }
 
@@ -61,13 +60,13 @@ export interface ProposedItem {
 
 export type Proposal =
   | {
-      kind: 'transaction';
+      kind: "transaction";
       proposal_id: string;
       expires_at: string;
       items: ProposedItem[];
     }
   | {
-      kind: 'budget';
+      kind: "budget";
       proposal_id: string;
       expires_at: string;
       category: string;
@@ -75,6 +74,8 @@ export type Proposal =
       amount: string;
       previous_amount: string | null;
     };
+
+export type ProposalEdits = { items: TransactionInput[] } | { amount: string };
 
 export interface ConfirmResult {
   transactions: Transaction[];
@@ -89,14 +90,14 @@ export interface ChatDone {
 }
 
 export type ChatEvent =
-  | { type: 'status'; data: { text: string } }
-  | { type: 'proposal'; data: Proposal }
-  | { type: 'token'; data: { text: string } }
-  | { type: 'done'; data: ChatDone }
-  | { type: 'error'; data: { message: string } };
+  | { type: "status"; data: { text: string } }
+  | { type: "proposal"; data: Proposal }
+  | { type: "token"; data: { text: string } }
+  | { type: "done"; data: ChatDone }
+  | { type: "error"; data: { message: string } };
 
 export interface ChatTurn {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 }
 

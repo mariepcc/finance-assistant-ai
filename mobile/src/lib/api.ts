@@ -1,15 +1,16 @@
-import { env } from './env';
-import { supabase } from './supabase';
+import { env } from "./env";
+import { supabase } from "./supabase";
 import type {
   Category,
   ConfirmResult,
   Profile,
+  ProposalEdits,
   Transaction,
   TransactionFilters,
   TransactionInput,
   TransactionPage,
   TransactionType,
-} from './types';
+} from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -22,8 +23,8 @@ export class ApiError extends Error {
 
 export function detailMessage(body: unknown, status: number): string {
   const detail = (body as { detail?: unknown } | null)?.detail;
-  if (typeof detail === 'string') return detail;
-  if (Array.isArray(detail)) return 'Nieprawidłowe dane formularza';
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) return "Nieprawidłowe dane formularza";
   return `Błąd serwera (${status})`;
 }
 
@@ -33,7 +34,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${env.apiUrl}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
@@ -46,28 +47,44 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 function query(params: Record<string, string | number | undefined>): string {
   const entries = Object.entries(params).filter(
-    (e): e is [string, string | number] => e[1] !== undefined && e[1] !== '',
+    (e): e is [string, string | number] => e[1] !== undefined && e[1] !== "",
   );
-  return entries.length ? `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)]))}` : '';
+  return entries.length
+    ? `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)]))}`
+    : "";
 }
 
 export const api = {
-  me: () => request<Profile>('/me'),
+  me: () => request<Profile>("/me"),
   acceptConsent: (default_currency: string) =>
-    request<Profile>('/me/consent', {
-      method: 'POST',
+    request<Profile>("/me/consent", {
+      method: "POST",
       body: JSON.stringify({ accepted: true, default_currency }),
     }),
-  categories: (kind?: TransactionType) => request<Category[]>(`/categories${query({ kind })}`),
+  categories: (kind?: TransactionType) =>
+    request<Category[]>(`/categories${query({ kind })}`),
   transactions: (filters: TransactionFilters, cursor?: string) =>
-    request<TransactionPage>(`/transactions${query({ ...filters, cursor, limit: 50 })}`),
+    request<TransactionPage>(
+      `/transactions${query({ ...filters, cursor, limit: 50 })}`,
+    ),
   transaction: (id: string) => request<Transaction>(`/transactions/${id}`),
   createTransaction: (input: TransactionInput) =>
-    request<Transaction>('/transactions', { method: 'POST', body: JSON.stringify(input) }),
+    request<Transaction>("/transactions", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
   updateTransaction: (id: string, input: Partial<TransactionInput>) =>
-    request<Transaction>(`/transactions/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
-  deleteTransaction: (id: string) => request<void>(`/transactions/${id}`, { method: 'DELETE' }),
-  confirmProposal: (id: string) =>
-    request<ConfirmResult>(`/proposals/${id}/confirm`, { method: 'POST' }),
-  rejectProposal: (id: string) => request<unknown>(`/proposals/${id}/reject`, { method: 'POST' }),
+    request<Transaction>(`/transactions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
+  deleteTransaction: (id: string) =>
+    request<void>(`/transactions/${id}`, { method: "DELETE" }),
+  confirmProposal: ({ id, edits }: { id: string; edits?: ProposalEdits }) =>
+    request<ConfirmResult>(`/proposals/${id}/confirm`, {
+      method: "POST",
+      ...(edits ? { body: JSON.stringify(edits) } : {}),
+    }),
+  rejectProposal: (id: string) =>
+    request<unknown>(`/proposals/${id}/reject`, { method: "POST" }),
 };

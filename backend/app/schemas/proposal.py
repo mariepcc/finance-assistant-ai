@@ -30,6 +30,7 @@ class TransactionProposalItem(BaseModel):
 
 class TransactionProposalPayload(BaseModel):
     items: list[TransactionProposalItem]
+    original_items: list[TransactionProposalItem] | None = None
 
 
 class BudgetProposalPayload(BaseModel):
@@ -38,6 +39,20 @@ class BudgetProposalPayload(BaseModel):
     amount: Money
     currency: str
     previous_amount: Decimal | None
+    original_amount: Decimal | None = None
+
+
+class EditedTransaction(BaseModel):
+    type: TransactionType
+    amount: Money
+    category_id: UUID
+    occurred_on: date
+    note: str | None = Field(default=None, max_length=500)
+
+
+class ConfirmIn(BaseModel):
+    items: list[EditedTransaction] | None = Field(default=None, min_length=1, max_length=20)
+    amount: Money | None = None
 
 
 class ProposalOut(ORMModel):
