@@ -23,9 +23,16 @@ class Period(BaseModel):
     date_to: date
 
 
+class SubcategoryInfo(BaseModel):
+    name: str
+    description: str | None = None
+
+
 class CategoryInfo(BaseModel):
     name: str
     kind: TransactionType
+    description: str | None = None
+    subcategories: list[SubcategoryInfo] = []
 
 
 class CategoriesResult(BaseModel):
@@ -38,6 +45,7 @@ class TransactionItem(BaseModel):
     amount: Amount
     currency: str
     category: str
+    subcategory: str | None
     note: str | None
 
 
@@ -56,6 +64,7 @@ class ProposedItem(BaseModel):
     amount: Amount
     currency: str
     category: str
+    subcategory: str | None
     occurred_on: date
     note: str | None
 
@@ -98,6 +107,7 @@ class CategoryShare(BaseModel):
 class BreakdownResult(BaseModel):
     period: Period
     type: TransactionType
+    parent_category: str | None = None
     currency: str
     total: Amount
     categories: list[CategoryShare]
@@ -136,6 +146,7 @@ class SimulationResult(BaseModel):
     currency: str
     month: Period
     category: str
+    subcategory: str | None
     purchase_amount: Amount
     category_spent_before: Amount
     category_spent_after: Amount

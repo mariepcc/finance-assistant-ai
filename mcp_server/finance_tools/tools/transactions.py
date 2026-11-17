@@ -23,7 +23,10 @@ async def search_transactions(
     date_from: Annotated[date | None, Field(description="Początek okresu (RRRR-MM-DD)")] = None,
     date_to: Annotated[date | None, Field(description="Koniec okresu (RRRR-MM-DD)")] = None,
     type: Annotated[TransactionType | None, Field(description="expense albo income")] = None,
-    category: Annotated[str | None, Field(description="Nazwa kategorii, np. Jedzenie")] = None,
+    category: Annotated[
+        str | None,
+        Field(description="Kategoria lub podkategoria, np. Jedzenie albo Kawiarnie"),
+    ] = None,
     min_amount: Annotated[Decimal | None, Field(ge=0, description="Minimalna kwota")] = None,
     max_amount: Annotated[Decimal | None, Field(ge=0, description="Maksymalna kwota")] = None,
     text: Annotated[
@@ -48,9 +51,7 @@ async def search_transactions(
         )
         items, _ = await tx_repo.list_for_user(ctx.session, ctx.user_id, filters, limit)
         totals = await tx_repo.summarize_for_user(ctx.session, ctx.user_id, filters)
-        names = {
-            c.id: c.name for c in await categories_repo.list_for_user(ctx.session, ctx.user_id)
-        }
+        names = await categories_repo.names_by_id(ctx.session, ctx.user_id)
         return SearchResult(
             currency=ctx.currency,
             matched_count=totals.count,
@@ -64,7 +65,8 @@ async def search_transactions(
                     type=t.type,
                     amount=t.amount,
                     currency=t.currency,
-                    category=names.get(t.category_id, "?"),
+                    category=names.get(t.category_id, ("?", None))[0],
+                    subcategory=names.get(t.category_id, ("?", None))[1],
                     note=t.note,
                 )
                 for t in items
@@ -95,6 +97,7 @@ async def propose_transaction(
                     amount=i.amount,
                     currency=i.currency,
                     category=i.category,
+                    subcategory=i.subcategory,
                     occurred_on=i.occurred_on,
                     note=i.note,
                 )

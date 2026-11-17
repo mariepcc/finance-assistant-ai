@@ -10,4 +10,6 @@ class CategoryOut(ORMModel):
     kind: TransactionType
     icon: str | None
     color: str | None
+    parent_id: UUID | None
+    description: str | None
     is_default: bool

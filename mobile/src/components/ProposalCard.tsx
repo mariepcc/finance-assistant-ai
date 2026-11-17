@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ProposalState } from '@/hooks/useChat';
 import { useCategories, useConfirmProposal, useRejectProposal } from '@/hooks/queries';
 import { ApiError } from '@/lib/api';
+import { joinLabel } from '@/lib/categories';
 import {
   daysAgo,
   formatDayHeader,
@@ -14,6 +15,7 @@ import {
 } from '@/lib/format';
 import type { Proposal, ProposalEdits, ProposedItem, TransactionType } from '@/lib/types';
 
+import { CategoryPicker } from './CategoryPicker';
 import { colors, radius, spacing } from './theme';
 import { Button, Chip, ErrorText, Field } from './ui';
 
@@ -29,6 +31,7 @@ interface ItemDraft {
   amount: string;
   categoryId: string | null;
   category: string;
+  subcategory: string | null;
   date: string;
   note: string;
 }
@@ -47,6 +50,7 @@ function toDraft(item: ProposedItem): ItemDraft {
     amount: item.amount.replace('.', ','),
     categoryId: null,
     category: item.category,
+    subcategory: item.subcategory,
     date: item.occurred_on,
     note: item.note ?? '',
   };
@@ -68,7 +72,8 @@ function ItemEditor({
 
   useEffect(() => {
     if (draft.categoryId || !categories.data) return;
-    const match = categories.data.find((c) => c.name === draft.category);
+    const name = draft.subcategory ?? draft.category;
+    const match = categories.data.find((c) => c.name === name);
     if (match) onChange({ ...draft, categoryId: match.id });
   }, [categories.data, draft, onChange]);
 
@@ -80,7 +85,8 @@ function ItemEditor({
           selected={draft.type === 'expense'}
           color={colors.expense}
           onPress={() =>
-            draft.type !== 'expense' && set({ type: 'expense', categoryId: null, category: '' })
+            draft.type !== 'expense' &&
+            set({ type: 'expense', categoryId: null, category: '', subcategory: null })
           }
         />
         <Chip
@@ -88,7 +94,8 @@ function ItemEditor({
           selected={draft.type === 'income'}
           color={colors.income}
           onPress={() =>
-            draft.type !== 'income' && set({ type: 'income', categoryId: null, category: '' })
+            draft.type !== 'income' &&
+            set({ type: 'income', categoryId: null, category: '', subcategory: null })
           }
         />
       </View>
@@ -100,22 +107,18 @@ function ItemEditor({
         error={errors.amount}
       />
       <Text style={styles.label}>Kategoria</Text>
-      {categories.isPending ? (
-        <ActivityIndicator />
-      ) : (
-        <View style={styles.wrap}>
-          {categories.data?.map((c) => (
-            <Chip
-              key={c.id}
-              label={c.name}
-              color={c.color ?? undefined}
-              selected={draft.categoryId === c.id}
-              onPress={() => set({ categoryId: c.id, category: c.name })}
-            />
-          ))}
-        </View>
-      )}
-      <ErrorText>{errors.category ?? categories.error?.message}</ErrorText>
+      <CategoryPicker
+        kind={draft.type}
+        value={draft.categoryId}
+        onChange={(picked) =>
+          set({
+            categoryId: picked.id,
+            category: picked.category,
+            subcategory: picked.subcategory,
+          })
+        }
+        error={errors.category}
+      />
       <View style={styles.wrap}>
         <Chip label="Dziś" selected={draft.date === today()} onPress={() => set({ date: today() })} />
         <Chip
@@ -229,6 +232,7 @@ export function ProposalCard({
           amount: item.amount,
           currency: proposal.items[0]?.currency ?? 'PLN',
           category: drafts[i]?.category ?? '',
+          subcategory: drafts[i]?.subcategory ?? null,
           occurred_on: item.occurred_on,
           note: item.note,
         })),
@@ -303,9 +307,11 @@ export function ProposalCard({
         proposal.items.map((item, i) => (
           <View key={i} style={styles.row}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.primary}>{item.note || item.category}</Text>
+              <Text style={styles.primary}>
+                {item.note || joinLabel(item.category, item.subcategory)}
+              </Text>
               <Text style={styles.secondary}>
-                {item.category} · {formatDayHeader(item.occurred_on)}
+                {joinLabel(item.category, item.subcategory)} · {formatDayHeader(item.occurred_on)}
               </Text>
             </View>
             <Text

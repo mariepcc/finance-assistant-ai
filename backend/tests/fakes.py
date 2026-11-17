@@ -131,7 +131,17 @@ Handler = Callable[[dict[str, Any]], ToolOutcome]
 def default_handlers() -> dict[str, Handler]:
     return {
         "list_categories": lambda _: ToolOutcome(
-            {"categories": [{"name": "Jedzenie", "kind": "expense"}]}, False
+            {
+                "categories": [
+                    {
+                        "name": "Jedzenie",
+                        "kind": "expense",
+                        "description": None,
+                        "subcategories": [{"name": "Kawiarnie", "description": None}],
+                    }
+                ]
+            },
+            False,
         ),
         "get_summary": lambda _: ToolOutcome(SUMMARY, False),
         "get_budget_status": lambda _: ToolOutcome(BUDGETS, False),

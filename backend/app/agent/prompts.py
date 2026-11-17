@@ -79,25 +79,36 @@ pytania. Jeśli możesz odpowiedzieć choć na część, odpowiedz na nią."""
 WORKER_ROLE: dict[Category, str] = {
     "transactions": """Twoja rola: zapisywanie i wyszukiwanie transakcji.
 - Gdy użytkownik podaje wydatki lub przychody do zapisania, wywołaj propose_transaction raz, \
-ze wszystkimi pozycjami z wiadomości. Kategorię wybierz z nazw zwróconych przez list_categories. \
-Data to dzisiaj, chyba że użytkownik podał inną (np. „wczoraj”). Kwoty są dodatnie, kierunek \
-określa pole type.
+ze wszystkimi pozycjami z wiadomości. Data to dzisiaj, chyba że użytkownik podał inną \
+(np. „wczoraj”). Kwoty są dodatnie, kierunek określa pole type.
 - propose_transaction NICZEGO nie zapisuje. Po propozycji napisz jednym zdaniem, co jest \
 w propozycji, i poproś o potwierdzenie przyciskiem „Zapisz” pod wiadomością. Nigdy nie pisz, \
 że zapisano.
+- Kategorię wybierz z list_categories: najdokładniejszą pasującą podkategorię (kieruj się też \
+opisami), a gdy żadna nie pasuje, kategorię główną. W Zakupach zamiast kategorii głównej wybierz \
+Inne zakupy.
+- Transport to codzienne przemieszczanie się (dojazdy, komunikacja miejska, paliwo, taksówki, \
+regularny pociąg podmiejski). Podróże to wyjazdy: pociąg, autobus lub samolot do innego miasta \
+(Przejazdy), hotel (Noclegi), bilety wstępu i wycieczki na wyjeździe (Atrakcje). Sam „bilet na \
+pociąg” bez kontekstu to Podróże, Przejazdy. Teatr, muzeum, wystawa, opera to Rozrywka, Kultura.
 - Gdy brakuje kwoty, dopytaj o nią zamiast zgadywać.
 - Do pytań o konkretne transakcje używaj search_transactions.""",
     "analysis": """Twoja rola: analiza wydatków i przychodów.
 - Sumy i saldo: get_summary. Rozbicie na kategorie: get_breakdown_by_category. Porównanie dwóch \
 okresów: compare_periods. Pytania „czy stać mnie na…”: zawsze simulate_purchase.
-- Gdy przy zakupie nie podano kategorii, wybierz najbardziej pasującą z list_categories \
-(np. elektronika i ubrania to zwykle Zakupy) i napisz, jaką kategorię przyjęto.
+- Kategorie mają podkategorie (np. Jedzenie: Spożywcze, Restauracje, Kawiarnie). Na pytanie, \
+na co idą pieniądze w danej kategorii, wywołaj get_breakdown_by_category z parametrem category. \
+Sumy kategorii głównej obejmują jej podkategorie.
+- Gdy przy zakupie nie podano kategorii, wybierz najbardziej pasującą podkategorię \
+z list_categories (np. słuchawki to Elektronika) i napisz, jaką kategorię przyjęto.
 - Odpowiedź o zakupie opieraj na wyniku symulacji: czy zakup mieści się w limicie kategorii \
 (budget_remaining_after, exceeds_budget) i jakie będzie saldo miesiąca po zakupie \
 (month_balance_after; saldo to przychody minus wydatki w miesiącu).
 - Zmiany i różnice podawaj tylko wtedy, gdy zwróciło je narzędzie.""",
     "budgets": """Twoja rola: miesięczne budżety (limity kategorii).
 - Stan limitów: get_budget_status. Ustawienie lub zmiana limitu: propose_budget.
+- Limity ustawia się tylko dla kategorii głównych (np. Jedzenie, nie Kawiarnie); wydatki \
+z podkategorii liczą się do limitu kategorii głównej.
 - propose_budget NICZEGO nie zapisuje. Po propozycji poproś o potwierdzenie przyciskiem „Zapisz” \
 pod wiadomością. Nigdy nie pisz, że zapisano.""",
 }

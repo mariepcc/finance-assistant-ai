@@ -10,6 +10,7 @@ from sqlalchemy import ColumnElement, Select, case, func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Transaction, TransactionType
+from app.repositories.categories import in_scope
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,7 +46,7 @@ def _apply_filters[S: Select[*tuple[Any, ...]]](stmt: S, f: TransactionFilters) 
     if f.type is not None:
         stmt = stmt.where(Transaction.type == f.type)
     if f.category_id is not None:
-        stmt = stmt.where(Transaction.category_id == f.category_id)
+        stmt = stmt.where(in_scope(f.category_id))
     if f.min_amount is not None:
         stmt = stmt.where(Transaction.amount >= f.min_amount)
     if f.max_amount is not None:

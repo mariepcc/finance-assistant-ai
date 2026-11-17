@@ -16,4 +16,4 @@ async def test_tools_only_see_own_data(client_as: ClientAs, make_user: MakeUser)
     assert search["matched_count"] == 0 and search["transactions"] == []
     assert summary["expense"] == "0.00"
     assert budgets["budgets"] == []
-    assert len(cats["categories"]) == 10
+    assert len(cats["categories"]) == 11

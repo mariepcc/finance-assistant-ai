@@ -6,7 +6,7 @@ from app.models import TransactionType
 from app.repositories import analytics
 from pydantic import Field
 
-from finance_tools.context import month_of, period, resolve_category, tool_context
+from finance_tools.context import main_category, month_of, period, resolve_category, tool_context
 from finance_tools.results import (
     BreakdownResult,
     CategoryComparison,
@@ -52,21 +52,38 @@ async def get_breakdown_by_category(
     type: Annotated[
         TransactionType, Field(description="expense (domyślnie) albo income")
     ] = TransactionType.EXPENSE,
+    category: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Opcjonalnie kategoria główna, np. Jedzenie: rozbicie na jej podkategorie. "
+                "Bez tego rozbicie na kategorie główne."
+            )
+        ),
+    ] = None,
 ) -> BreakdownResult:
     p = period(date_from, date_to)
     async with tool_context() as ctx:
+        parent = None
+        if category is not None:
+            parent = await main_category(ctx, await resolve_category(ctx, category, type))
         rows = await analytics.breakdown_by_category(
-            ctx.session, ctx.user_id, p.date_from, p.date_to, type
+            ctx.session, ctx.user_id, p.date_from, p.date_to, type, parent.id if parent else None
         )
         total = sum((r.total for r in rows), Decimal("0.00"))
         return BreakdownResult(
             period=p,
             type=type,
+            parent_category=parent.name if parent else None,
             currency=ctx.currency,
             total=total,
             categories=[
                 CategoryShare(
-                    category=r.name,
+                    category=(
+                        f"{r.name} (bez podkategorii)"
+                        if parent is not None and r.category_id == parent.id
+                        else r.name
+                    ),
                     amount=r.total,
                     share_pct=percent(r.total, total),
                     transaction_count=r.count,
@@ -82,7 +99,8 @@ async def compare_periods(
     period_b_from: Annotated[date, Field(description="Początek okresu porównywanego")],
     period_b_to: Annotated[date, Field(description="Koniec okresu porównywanego")],
     category: Annotated[
-        str | None, Field(description="Opcjonalnie: porównaj tylko tę kategorię")
+        str | None,
+        Field(description="Opcjonalnie: porównaj tylko tę kategorię lub podkategorię"),
     ] = None,
 ) -> CompareResult:
     pa = period(period_a_from, period_a_to)
@@ -140,7 +158,9 @@ async def simulate_purchase(
     amount: Annotated[
         Decimal, Field(gt=0, max_digits=12, decimal_places=2, description="Kwota zakupu")
     ],
-    category: Annotated[str, Field(description="Kategoria wydatku, np. Rozrywka")],
+    category: Annotated[
+        str, Field(description="Kategoria lub podkategoria wydatku, np. Elektronika")
+    ],
     purchase_date: Annotated[
         date | None, Field(description="Data zakupu; domyślnie dziś (liczy się jej miesiąc)")
     ] = None,
@@ -148,19 +168,21 @@ async def simulate_purchase(
     month = month_of(purchase_date or date.today())
     async with tool_context() as ctx:
         found = await resolve_category(ctx, category, TransactionType.EXPENSE)
+        main = await main_category(ctx, found)
         cat_totals = await analytics.totals(
-            ctx.session, ctx.user_id, month.date_from, month.date_to, found.id
+            ctx.session, ctx.user_id, month.date_from, month.date_to, main.id
         )
         month_totals = await analytics.totals(
             ctx.session, ctx.user_id, month.date_from, month.date_to
         )
-        budget = await analytics.budget_for_category(ctx.session, ctx.user_id, found.id)
+        budget = await analytics.budget_for_category(ctx.session, ctx.user_id, main.id)
         spent_after = cat_totals.expense + amount
         limit = budget.amount if budget else None
         return SimulationResult(
             currency=ctx.currency,
             month=month,
-            category=found.name,
+            category=main.name,
+            subcategory=found.name if found.id != main.id else None,
             purchase_amount=amount,
             category_spent_before=cat_totals.expense,
             category_spent_after=spent_after,

@@ -14,6 +14,8 @@ export interface Category {
   kind: TransactionType;
   icon: string | null;
   color: string | null;
+  parent_id: string | null;
+  description: string | null;
   is_default: boolean;
 }
 
@@ -55,6 +57,7 @@ export interface ProposedItem {
   amount: string;
   currency: string;
   category: string;
+  subcategory: string | null;
   occurred_on: string;
   note: string | null;
 }

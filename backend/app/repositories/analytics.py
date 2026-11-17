@@ -3,10 +3,12 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, case, func, select
+from sqlalchemy import ColumnElement, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models import Budget, BudgetPeriod, Category, Transaction, TransactionType
+from app.repositories.categories import in_scope
 
 ZERO = Decimal("0.00")
 
@@ -60,7 +62,7 @@ async def totals(
         Transaction.occurred_on <= date_to,
     )
     if category_id is not None:
-        stmt = stmt.where(Transaction.category_id == category_id)
+        stmt = stmt.where(in_scope(category_id, user_id))
     income, expense, count = (await session.execute(stmt)).one()
     return Totals(income=Decimal(income) + ZERO, expense=Decimal(expense) + ZERO, count=count)
 
@@ -71,20 +73,30 @@ async def breakdown_by_category(
     date_from: date,
     date_to: date,
     tx_type: TransactionType,
+    parent_id: UUID | None = None,
 ) -> list[CategoryTotal]:
     total = func.sum(Transaction.amount)
+    group = aliased(Category)
+    leaf = aliased(Category)
+    if parent_id is None:
+        on = group.id == func.coalesce(leaf.parent_id, leaf.id)
+    else:
+        on = group.id == leaf.id
     stmt = (
-        select(Category.id, Category.name, total, func.count(Transaction.id))
-        .join(Category, Category.id == Transaction.category_id)
+        select(group.id, group.name, total, func.count(Transaction.id))
+        .join(leaf, leaf.id == Transaction.category_id)
+        .join(group, on)
         .where(
             Transaction.user_id == user_id,
             Transaction.type == tx_type,
             Transaction.occurred_on >= date_from,
             Transaction.occurred_on <= date_to,
         )
-        .group_by(Category.id, Category.name)
-        .order_by(total.desc(), Category.name)
+        .group_by(group.id, group.name)
+        .order_by(total.desc(), group.name)
     )
+    if parent_id is not None:
+        stmt = stmt.where(or_(leaf.id == parent_id, leaf.parent_id == parent_id))
     rows = (await session.execute(stmt)).all()
     return [
         CategoryTotal(category_id=cid, name=name, total=Decimal(amount) + ZERO, count=count)
@@ -107,11 +119,17 @@ async def budget_for_category(
 async def budget_usage(
     session: AsyncSession, user_id: UUID, month_start: date, month_end: date
 ) -> list[BudgetUsage]:
+    scoped = aliased(Category)
+    scope = (
+        select(scoped.id)
+        .where(or_(scoped.id == Budget.category_id, scoped.parent_id == Budget.category_id))
+        .correlate(Budget)
+    )
     spent = (
         select(func.coalesce(func.sum(Transaction.amount), 0))
         .where(
             Transaction.user_id == user_id,
-            Transaction.category_id == Budget.category_id,
+            Transaction.category_id.in_(scope),
             Transaction.type == TransactionType.EXPENSE,
             Transaction.occurred_on >= month_start,
             Transaction.occurred_on <= month_end,

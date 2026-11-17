@@ -28,5 +28,9 @@ class Category(UUIDPk, Timestamps, Base):
     kind: Mapped[TransactionType] = mapped_column(pg_enum(TransactionType, "transaction_type"))
     icon: Mapped[str | None] = mapped_column(Text)
     color: Mapped[str | None] = mapped_column(Text)
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("categories.id", ondelete="CASCADE"), index=True
+    )
+    description: Mapped[str | None] = mapped_column(Text)
     is_default: Mapped[bool] = mapped_column(Boolean, server_default=false())
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { useCategories } from '@/hooks/queries';
 import { daysAgo, isValidIsoDate, normalizeAmount, today } from '@/lib/format';
 import type { TransactionInput, TransactionType } from '@/lib/types';
 
+import { CategoryPicker } from './CategoryPicker';
 import { colors, spacing } from './theme';
 import { Button, Chip, ErrorText, Field } from './ui';
 
@@ -23,7 +23,6 @@ export function TransactionForm({ initial, submitLabel, submitting, serverError,
   const [date, setDate] = useState(initial?.occurred_on ?? today());
   const [note, setNote] = useState(initial?.note ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const categories = useCategories(type);
 
   function changeType(next: TransactionType) {
     if (next === type) return;
@@ -75,22 +74,12 @@ export function TransactionForm({ initial, submitLabel, submitting, serverError,
       />
 
       <Text style={styles.label}>Kategoria</Text>
-      {categories.isPending ? (
-        <ActivityIndicator />
-      ) : (
-        <View style={styles.wrap}>
-          {categories.data?.map((c) => (
-            <Chip
-              key={c.id}
-              label={c.name}
-              color={c.color ?? undefined}
-              selected={categoryId === c.id}
-              onPress={() => setCategoryId(c.id)}
-            />
-          ))}
-        </View>
-      )}
-      <ErrorText>{errors.category ?? categories.error?.message}</ErrorText>
+      <CategoryPicker
+        kind={type}
+        value={categoryId}
+        onChange={(picked) => setCategoryId(picked.id)}
+        error={errors.category}
+      />
 
       <Text style={styles.label}>Data</Text>
       <View style={styles.row}>
@@ -123,6 +112,5 @@ export function TransactionForm({ initial, submitLabel, submitting, serverError,
 const styles = StyleSheet.create({
   container: { padding: spacing.md, gap: spacing.md },
   row: { flexDirection: 'row', gap: spacing.sm },
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   label: { fontSize: 14, color: colors.muted, fontWeight: '500' },
 });

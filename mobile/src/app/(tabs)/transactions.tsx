@@ -16,6 +16,7 @@ import {
 import { colors, radius, spacing } from '@/components/theme';
 import { Centered, Chip, ErrorText } from '@/components/ui';
 import { useCategories, useTransactions } from '@/hooks/queries';
+import { categoryLabel } from '@/lib/categories';
 import { formatDayHeader, formatMoney, monthRange } from '@/lib/format';
 import type { Category, Transaction, TransactionFilters, TransactionType } from '@/lib/types';
 
@@ -70,7 +71,9 @@ export default function TransactionsScreen() {
     () => new Map((categories.data ?? []).map((c) => [c.id, c])),
     [categories.data],
   );
-  const visibleCategories = (categories.data ?? []).filter((c) => !type || c.kind === type);
+  const visibleCategories = (categories.data ?? []).filter(
+    (c) => c.parent_id === null && (!type || c.kind === type),
+  );
   const sections = useMemo(
     () => groupByDay(list.data?.pages.flatMap((p) => p.items) ?? []),
     [list.data],
@@ -129,7 +132,7 @@ export default function TransactionsScreen() {
           renderSectionHeader={({ section }) => (
             <Text style={styles.dayHeader}>{formatDayHeader(section.title)}</Text>
           )}
-          renderItem={({ item }) => <TransactionRow tx={item} category={byId.get(item.category_id)} />}
+          renderItem={({ item }) => <TransactionRow tx={item} byId={byId} />}
           stickySectionHeadersEnabled={false}
           onEndReached={() => {
             if (list.hasNextPage && !list.isFetchingNextPage) void list.fetchNextPage();
@@ -156,15 +159,19 @@ export default function TransactionsScreen() {
   );
 }
 
-function TransactionRow({ tx, category }: { tx: Transaction; category?: Category }) {
+function TransactionRow({ tx, byId }: { tx: Transaction; byId: Map<string, Category> }) {
+  const category = byId.get(tx.category_id);
+  const parent = category?.parent_id ? byId.get(category.parent_id) : undefined;
   return (
     <Pressable
       style={({ pressed }) => [styles.item, pressed && { opacity: 0.7 }]}
       onPress={() => router.push({ pathname: '/transaction/[id]', params: { id: tx.id } })}
     >
-      <View style={[styles.dot, { backgroundColor: category?.color ?? colors.muted }]} />
+      <View
+        style={[styles.dot, { backgroundColor: parent?.color ?? category?.color ?? colors.muted }]}
+      />
       <View style={{ flex: 1 }}>
-        <Text style={styles.itemTitle}>{category?.name ?? 'Kategoria'}</Text>
+        <Text style={styles.itemTitle}>{categoryLabel(category, byId)}</Text>
         {tx.note ? (
           <Text style={styles.itemNote} numberOfLines={1}>
             {tx.note}

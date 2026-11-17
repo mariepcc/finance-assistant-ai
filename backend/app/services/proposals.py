@@ -68,6 +68,16 @@ async def resolve_category(
     return category
 
 
+async def category_labels(
+    session: AsyncSession, user_id: UUID, category: Category
+) -> dict[str, str | None]:
+    if category.parent_id is None:
+        return {"category": category.name, "subcategory": None}
+    parent = await categories_repo.get_for_user(session, user_id, category.parent_id)
+    assert parent is not None
+    return {"category": parent.name, "subcategory": category.name}
+
+
 async def propose_transactions(
     session: AsyncSession, user_id: UUID, items: list[ProposedTransaction]
 ) -> Proposal:
@@ -83,7 +93,7 @@ async def propose_transactions(
                 amount=item.amount,
                 currency=profile.default_currency,
                 category_id=category.id,
-                category=category.name,
+                **await category_labels(session, user_id, category),
                 occurred_on=item.occurred_on,
                 note=item.note,
             )
@@ -105,6 +115,12 @@ async def propose_budget(
 ) -> Proposal:
     profile = await _consented_profile(session, user_id)
     category = await resolve_category(session, user_id, category_name, TransactionType.EXPENSE)
+    if category.parent_id is not None:
+        labels = await category_labels(session, user_id, category)
+        raise InvalidInputError(
+            f"Budżet ustawiasz dla kategorii głównej („{labels['category']}”), "
+            f"nie dla podkategorii „{category.name}”"
+        )
     existing = await analytics_repo.budget_for_category(session, user_id, category.id)
     payload = BudgetProposalPayload(
         category_id=category.id,
@@ -155,7 +171,7 @@ async def _apply_item_edits(
                 amount=item.amount,
                 currency=currency,
                 category_id=category.id,
-                category=category.name,
+                **await category_labels(session, user_id, category),
                 occurred_on=item.occurred_on,
                 note=(item.note or "").strip() or None,
             )

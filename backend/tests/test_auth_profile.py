@@ -48,7 +48,13 @@ async def test_consent_seeds_default_categories_once(
         assert r.status_code == 200
         assert r.json()["gdpr_consent_at"] is not None
     cats = (await client.get("/categories", headers=headers)).json()
-    assert len(cats) == 10
+    parents = {c["id"]: c["name"] for c in cats if c["parent_id"] is None}
+    assert len(parents) == 11
+    assert len(cats) == 42
+    by_name = {c["name"]: c for c in cats}
+    assert parents[by_name["Kawiarnie"]["parent_id"]] == "Jedzenie"
+    assert parents[by_name["Przejazdy"]["parent_id"]] == "Podróże"
+    assert by_name["Kultura"]["description"] == "teatr, muzea, wystawy, opera"
     expense = (await client.get("/categories?kind=expense", headers=headers)).json()
     assert {c["kind"] for c in expense} == {"expense"}
     assert "Jedzenie" in {c["name"] for c in expense}

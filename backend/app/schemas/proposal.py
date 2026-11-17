@@ -24,6 +24,7 @@ class TransactionProposalItem(BaseModel):
     currency: str
     category_id: UUID
     category: str
+    subcategory: str | None = None
     occurred_on: date
     note: str | None
 

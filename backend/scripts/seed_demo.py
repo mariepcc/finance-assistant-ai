@@ -33,7 +33,37 @@ RANDOM_SPENDING: list[tuple[str, tuple[str | None, ...], float, float, float]] =
     ("Inne", (None,), 0.04, 10, 120),
 ]
 
+SUBCATEGORY_BY_NOTE = {
+    "czynsz": "Czynsz",
+    "internet": "Internet i telefon",
+    "Spotify": "Streaming",
+    "prąd": "Prąd i gaz",
+    "Biedronka": "Spożywcze",
+    "Lidl": "Spożywcze",
+    "Żabka": "Spożywcze",
+    "kawa": "Kawiarnie",
+    "obiad": "Restauracje",
+    "bilet": "Komunikacja miejska",
+    "Bolt": "Taksówki",
+    "paliwo": "Paliwo",
+    "kino": "Kino",
+    "koncert": "Koncerty",
+    "książka": "Książki",
+    "ubrania": "Ubrania",
+    "Rossmann": "Drogeria",
+    "Allegro": "Inne zakupy",
+    "apteka": "Apteka",
+    "dentysta": "Lekarz",
+}
+FALLBACK_SUBCATEGORY = {"Zakupy": "Inne zakupy"}
+
 BUDGETS = {"Jedzenie": "1200.00", "Transport": "250.00", "Rozrywka": "300.00", "Zakupy": "400.00"}
+
+
+def leaf_category(category: str, note: str | None) -> str:
+    if note is not None and note in SUBCATEGORY_BY_NOTE:
+        return SUBCATEGORY_BY_NOTE[note]
+    return FALLBACK_SUBCATEGORY.get(category, category)
 
 
 def month_start(day: date, back: int) -> date:
@@ -61,7 +91,7 @@ def build_transactions(
                 type=kind,
                 amount=amount,
                 currency="PLN",
-                category_id=categories[category],
+                category_id=categories[leaf_category(category, note)],
                 occurred_on=day,
                 note=note,
             )

@@ -48,6 +48,14 @@ async def resolve_category(
     return category
 
 
+async def main_category(ctx: ToolContext, category: Category) -> Category:
+    if category.parent_id is None:
+        return category
+    parent = await categories_repo.get_for_user(ctx.session, ctx.user_id, category.parent_id)
+    assert parent is not None
+    return parent
+
+
 def period(date_from: date, date_to: date) -> Period:
     if date_from > date_to:
         raise ToolError("Data początkowa nie może być późniejsza niż końcowa")
