@@ -173,3 +173,21 @@ async def test_timeout_becomes_error_event() -> None:
     )
     events = await collect(llm, agent_timeout_s=0.05)
     assert events[-1] == Event("error", {"message": TIMEOUT_MESSAGE})
+
+
+async def test_parallel_workers_know_about_each_other() -> None:
+    llm = FakeLLM(
+        routes=routes(["analysis", "budgets"]),
+        steps={"analysis": [text_step("A")], "budgets": [text_step("B")]},
+        completions=["A i B"],
+    )
+    await collect(llm)
+    messages = {category: msgs[0]["content"] for category, msgs in llm.step_calls}
+    assert prompts.CATEGORY_LABEL["budgets"] in messages["analysis"]
+    assert prompts.CATEGORY_LABEL["analysis"] in messages["budgets"]
+
+
+async def test_single_worker_gets_plain_message() -> None:
+    llm = FakeLLM(routes=routes(["analysis"]), steps={"analysis": [text_step("ok")]})
+    await collect(llm)
+    assert llm.step_calls[0][1][0]["content"] == "Ile wydałam w październiku?"

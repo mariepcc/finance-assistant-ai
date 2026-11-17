@@ -44,13 +44,20 @@ def chunk_text(text: str, words: int = TOKEN_CHUNK_WORDS) -> list[str]:
     return ["".join(pieces[i : i + words]) for i in range(0, len(pieces), words)]
 
 
-def worker_message(chat: ChatInput) -> str:
-    if not chat.history:
-        return chat.message
-    return (
-        f"Historia rozmowy (od najstarszej):\n<historia>\n{transcript(chat.history)}\n</historia>"
-        f"\n\nAktualna wiadomość użytkownika:\n<wiadomosc>\n{chat.message}\n</wiadomosc>"
-    )
+def worker_message(chat: ChatInput, others: Sequence[Category] = ()) -> str:
+    parts = []
+    if chat.history:
+        parts.append(
+            "Historia rozmowy (od najstarszej):\n"
+            f"<historia>\n{transcript(chat.history)}\n</historia>"
+        )
+    if parts or others:
+        parts.append(f"Aktualna wiadomość użytkownika:\n<wiadomosc>\n{chat.message}\n</wiadomosc>")
+    else:
+        parts.append(chat.message)
+    if others:
+        parts.append(prompts.parallel_note(list(others)))
+    return "\n\n".join(parts)
 
 
 class Orchestrator:
@@ -155,7 +162,7 @@ class Orchestrator:
             await emit(Event("status", {"text": prompts.CATEGORY_STATUS[category]}))
             return await run_worker(
                 prompts.worker_system(category, chat.today, chat.currency),
-                worker_message(chat),
+                worker_message(chat, [c for c in categories if c != category]),
                 [t for t in tools if t.category == category] + shared,
                 s.worker_model,
                 s.agent_max_steps,
