@@ -1,23 +1,22 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ApiError } from "@/lib/api";
-import { streamChat } from "@/lib/chat";
-import type { ChatEvent, ChatTurn, Proposal } from "@/lib/types";
+import { ApiError } from '@/lib/api';
+import { streamChat } from '@/lib/chat';
+import type { ChatEvent, ChatTurn, Proposal } from '@/lib/types';
 
 export const HISTORY_LIMIT = 6;
 
-export type ProposalState =
-  "pending" | "saved" | "rejected" | "expired" | "handled";
+export type ProposalState = 'pending' | 'saved' | 'rejected' | 'expired' | 'handled';
 
 export interface UserItem {
   id: string;
-  role: "user";
+  role: 'user';
   text: string;
 }
 
 export interface AssistantItem {
   id: string;
-  role: "assistant";
+  role: 'assistant';
   text: string;
   status: string | null;
   proposals: { proposal: Proposal; state: ProposalState }[];
@@ -33,9 +32,9 @@ const nextId = () => `${Date.now()}-${++counter}`;
 export function historyFrom(items: ChatItem[]): ChatTurn[] {
   const turns: ChatTurn[] = [];
   for (const item of items) {
-    if (item.role === "user") turns.push({ role: "user", content: item.text });
+    if (item.role === 'user') turns.push({ role: 'user', content: item.text });
     else if (!item.pending && !item.error && item.text) {
-      turns.push({ role: "assistant", content: item.text });
+      turns.push({ role: 'assistant', content: item.text });
     }
   }
   return turns.slice(-HISTORY_LIMIT);
@@ -43,27 +42,19 @@ export function historyFrom(items: ChatItem[]): ChatTurn[] {
 
 function applyEvent(item: AssistantItem, event: ChatEvent): AssistantItem {
   switch (event.type) {
-    case "status":
+    case 'status':
       return { ...item, status: event.data.text };
-    case "proposal":
+    case 'proposal':
       return {
         ...item,
-        proposals: [
-          ...item.proposals,
-          { proposal: event.data, state: "pending" },
-        ],
+        proposals: [...item.proposals, { proposal: event.data, state: 'pending' }],
       };
-    case "token":
+    case 'token':
       return { ...item, text: item.text + event.data.text, status: null };
-    case "done":
+    case 'done':
       return { ...item, pending: false, status: null };
-    case "error":
-      return {
-        ...item,
-        pending: false,
-        status: null,
-        error: event.data.message,
-      };
+    case 'error':
+      return { ...item, pending: false, status: null, error: event.data.message };
   }
 }
 
@@ -75,16 +66,11 @@ export function useChat() {
 
   useEffect(() => () => abort.current?.abort(), []);
 
-  const update = useCallback(
-    (id: string, fn: (item: AssistantItem) => AssistantItem) => {
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === id && item.role === "assistant" ? fn(item) : item,
-        ),
-      );
-    },
-    [],
-  );
+  const update = useCallback((id: string, fn: (item: AssistantItem) => AssistantItem) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id && item.role === 'assistant' ? fn(item) : item)),
+    );
+  }, []);
 
   const send = useCallback(
     async (raw: string) => {
@@ -94,12 +80,12 @@ export function useChat() {
       const assistantId = nextId();
       setItems((prev) => [
         ...prev,
-        { id: nextId(), role: "user", text: message },
+        { id: nextId(), role: 'user', text: message },
         {
           id: assistantId,
-          role: "assistant",
-          text: "",
-          status: "Łączę się z asystentem…",
+          role: 'assistant',
+          text: '',
+          status: 'Łączę się z asystentem…',
           proposals: [],
           error: null,
           pending: true,
@@ -112,8 +98,7 @@ export function useChat() {
         await streamChat(
           { message, history, previous_categories: categories.current },
           (event) => {
-            if (event.type === "done")
-              categories.current = event.data.categories;
+            if (event.type === 'done') categories.current = event.data.categories;
             update(assistantId, (item) => applyEvent(item, event));
           },
           controller.signal,
@@ -124,22 +109,15 @@ export function useChat() {
                 ...item,
                 pending: false,
                 status: null,
-                error: item.text ? null : "Przerwano odpowiedź.",
+                error: item.text ? null : 'Przerwano odpowiedź.',
               }
             : item,
         );
       } catch (err) {
         if (controller.signal.aborted) return;
         const text =
-          err instanceof ApiError
-            ? err.message
-            : "Brak połączenia z serwerem. Spróbuj ponownie.";
-        update(assistantId, (item) => ({
-          ...item,
-          pending: false,
-          status: null,
-          error: text,
-        }));
+          err instanceof ApiError ? err.message : 'Brak połączenia z serwerem. Spróbuj ponownie.';
+        update(assistantId, (item) => ({ ...item, pending: false, status: null, error: text }));
       } finally {
         setSending(false);
       }
@@ -151,7 +129,7 @@ export function useChat() {
     (proposalId: string, state: ProposalState, updated?: Proposal) => {
       setItems((prev) =>
         prev.map((item) =>
-          item.role === "assistant" &&
+          item.role === 'assistant' &&
           item.proposals.some((p) => p.proposal.proposal_id === proposalId)
             ? {
                 ...item,

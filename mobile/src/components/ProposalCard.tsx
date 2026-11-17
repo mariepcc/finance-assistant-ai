@@ -1,19 +1,9 @@
-import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { ProposalState } from "@/hooks/useChat";
-import {
-  useCategories,
-  useConfirmProposal,
-  useRejectProposal,
-} from "@/hooks/queries";
-import { ApiError } from "@/lib/api";
+import type { ProposalState } from '@/hooks/useChat';
+import { useCategories, useConfirmProposal, useRejectProposal } from '@/hooks/queries';
+import { ApiError } from '@/lib/api';
 import {
   daysAgo,
   formatDayHeader,
@@ -21,22 +11,17 @@ import {
   isValidIsoDate,
   normalizeAmount,
   today,
-} from "@/lib/format";
-import type {
-  Proposal,
-  ProposalEdits,
-  ProposedItem,
-  TransactionType,
-} from "@/lib/types";
+} from '@/lib/format';
+import type { Proposal, ProposalEdits, ProposedItem, TransactionType } from '@/lib/types';
 
-import { colors, radius, spacing } from "./theme";
-import { Button, Chip, ErrorText, Field } from "./ui";
+import { colors, radius, spacing } from './theme';
+import { Button, Chip, ErrorText, Field } from './ui';
 
-const STATE_LABEL: Record<Exclude<ProposalState, "pending">, string> = {
-  saved: "Zapisano",
-  rejected: "Odrzucono",
-  expired: "Propozycja wygasła, poproś asystenta jeszcze raz",
-  handled: "Ta propozycja została już rozpatrzona",
+const STATE_LABEL: Record<Exclude<ProposalState, 'pending'>, string> = {
+  saved: 'Zapisano',
+  rejected: 'Odrzucono',
+  expired: 'Propozycja wygasła, poproś asystenta jeszcze raz',
+  handled: 'Ta propozycja została już rozpatrzona',
 };
 
 interface ItemDraft {
@@ -48,22 +33,22 @@ interface ItemDraft {
   note: string;
 }
 
-type ItemErrors = Partial<Record<"amount" | "category" | "date", string>>;
+type ItemErrors = Partial<Record<'amount' | 'category' | 'date', string>>;
 
 function stateFromError(err: unknown): ProposalState | null {
-  if (err instanceof ApiError && err.status === 410) return "expired";
-  if (err instanceof ApiError && err.status === 409) return "handled";
+  if (err instanceof ApiError && err.status === 410) return 'expired';
+  if (err instanceof ApiError && err.status === 409) return 'handled';
   return null;
 }
 
 function toDraft(item: ProposedItem): ItemDraft {
   return {
     type: item.type,
-    amount: item.amount.replace(".", ","),
+    amount: item.amount.replace('.', ','),
     categoryId: null,
     category: item.category,
     date: item.occurred_on,
-    note: item.note ?? "",
+    note: item.note ?? '',
   };
 }
 
@@ -92,20 +77,18 @@ function ItemEditor({
       <View style={styles.wrap}>
         <Chip
           label="Wydatek"
-          selected={draft.type === "expense"}
+          selected={draft.type === 'expense'}
           color={colors.expense}
           onPress={() =>
-            draft.type !== "expense" &&
-            set({ type: "expense", categoryId: null, category: "" })
+            draft.type !== 'expense' && set({ type: 'expense', categoryId: null, category: '' })
           }
         />
         <Chip
           label="Przychód"
-          selected={draft.type === "income"}
+          selected={draft.type === 'income'}
           color={colors.income}
           onPress={() =>
-            draft.type !== "income" &&
-            set({ type: "income", categoryId: null, category: "" })
+            draft.type !== 'income' && set({ type: 'income', categoryId: null, category: '' })
           }
         />
       </View>
@@ -134,11 +117,7 @@ function ItemEditor({
       )}
       <ErrorText>{errors.category ?? categories.error?.message}</ErrorText>
       <View style={styles.wrap}>
-        <Chip
-          label="Dziś"
-          selected={draft.date === today()}
-          onPress={() => set({ date: today() })}
-        />
+        <Chip label="Dziś" selected={draft.date === today()} onPress={() => set({ date: today() })} />
         <Chip
           label="Wczoraj"
           selected={draft.date === daysAgo(1)}
@@ -168,16 +147,12 @@ function ItemEditor({
   );
 }
 
-function validateItems(drafts: ItemDraft[]): {
-  errors: ItemErrors[];
-  edits?: ProposalEdits;
-} {
+function validateItems(drafts: ItemDraft[]): { errors: ItemErrors[]; edits?: ProposalEdits } {
   const errors = drafts.map((d) => {
     const e: ItemErrors = {};
-    if (!normalizeAmount(d.amount))
-      e.amount = "Podaj kwotę większą od zera, np. 4,40";
-    if (!d.categoryId) e.category = "Wybierz kategorię";
-    if (!isValidIsoDate(d.date)) e.date = "Data w formacie RRRR-MM-DD";
+    if (!normalizeAmount(d.amount)) e.amount = 'Podaj kwotę większą od zera, np. 4,40';
+    if (!d.categoryId) e.category = 'Wybierz kategorię';
+    if (!isValidIsoDate(d.date)) e.date = 'Data w formacie RRRR-MM-DD';
     return e;
   });
   if (errors.some((e) => Object.keys(e).length > 0)) return { errors };
@@ -186,8 +161,8 @@ function validateItems(drafts: ItemDraft[]): {
     edits: {
       items: drafts.map((d) => ({
         type: d.type,
-        amount: normalizeAmount(d.amount) ?? "",
-        category_id: d.categoryId ?? "",
+        amount: normalizeAmount(d.amount) ?? '',
+        category_id: d.categoryId ?? '',
         occurred_on: d.date,
         note: d.note.trim() || null,
       })),
@@ -209,12 +184,11 @@ export function ProposalCard({
   const [editing, setEditing] = useState(false);
   const [drafts, setDrafts] = useState<ItemDraft[]>([]);
   const [itemErrors, setItemErrors] = useState<ItemErrors[]>([]);
-  const [budgetAmount, setBudgetAmount] = useState("");
+  const [budgetAmount, setBudgetAmount] = useState('');
   const [budgetError, setBudgetError] = useState<string>();
   const busy = confirm.isPending || reject.isPending;
   const failure = confirm.error ?? reject.error;
-  const failureText =
-    failure && !stateFromError(failure) ? failure.message : null;
+  const failureText = failure && !stateFromError(failure) ? failure.message : null;
 
   const fail = (err: unknown) => {
     const next = stateFromError(err);
@@ -223,11 +197,11 @@ export function ProposalCard({
 
   const startEditing = () => {
     confirm.reset();
-    if (proposal.kind === "transaction") {
+    if (proposal.kind === 'transaction') {
       setDrafts(proposal.items.map(toDraft));
       setItemErrors([]);
     } else {
-      setBudgetAmount(proposal.amount.replace(".", ","));
+      setBudgetAmount(proposal.amount.replace('.', ','));
       setBudgetError(undefined);
     }
     setEditing(true);
@@ -237,33 +211,31 @@ export function ProposalCard({
     if (!editing) {
       confirm.mutate(
         { id: proposal.proposal_id },
-        { onSuccess: () => onStateChange("saved"), onError: fail },
+        { onSuccess: () => onStateChange('saved'), onError: fail },
       );
       return;
     }
     let edits: ProposalEdits;
     let updated: Proposal;
-    if (proposal.kind === "transaction") {
+    if (proposal.kind === 'transaction') {
       const result = validateItems(drafts);
       setItemErrors(result.errors);
-      if (!result.edits || !("items" in result.edits)) return;
+      if (!result.edits || !('items' in result.edits)) return;
       edits = result.edits;
       updated = {
         ...proposal,
         items: result.edits.items.map((item, i) => ({
           type: item.type,
           amount: item.amount,
-          currency: proposal.items[0]?.currency ?? "PLN",
-          category: drafts[i]?.category ?? "",
+          currency: proposal.items[0]?.currency ?? 'PLN',
+          category: drafts[i]?.category ?? '',
           occurred_on: item.occurred_on,
           note: item.note,
         })),
       };
     } else {
       const amount = normalizeAmount(budgetAmount);
-      setBudgetError(
-        amount ? undefined : "Podaj kwotę większą od zera, np. 500",
-      );
+      setBudgetError(amount ? undefined : 'Podaj kwotę większą od zera, np. 500');
       if (!amount) return;
       edits = { amount };
       updated = { ...proposal, amount };
@@ -273,7 +245,7 @@ export function ProposalCard({
       {
         onSuccess: () => {
           setEditing(false);
-          onStateChange("saved", updated);
+          onStateChange('saved', updated);
         },
         onError: fail,
       },
@@ -284,7 +256,7 @@ export function ProposalCard({
     reject.mutate(proposal.proposal_id, {
       onSuccess: () => {
         setEditing(false);
-        onStateChange("rejected");
+        onStateChange('rejected');
       },
       onError: fail,
     });
@@ -297,15 +269,15 @@ export function ProposalCard({
     setItemErrors((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const pending = state === "pending";
+  const pending = state === 'pending';
 
   return (
     <View style={styles.card}>
       <Text style={styles.title}>
-        {proposal.kind === "transaction" ? "Do zapisania" : "Zmiana budżetu"}
+        {proposal.kind === 'transaction' ? 'Do zapisania' : 'Zmiana budżetu'}
       </Text>
       {pending && editing ? (
-        proposal.kind === "transaction" ? (
+        proposal.kind === 'transaction' ? (
           drafts.map((draft, i) => (
             <ItemEditor
               key={i}
@@ -327,7 +299,7 @@ export function ProposalCard({
             />
           </View>
         )
-      ) : proposal.kind === "transaction" ? (
+      ) : proposal.kind === 'transaction' ? (
         proposal.items.map((item, i) => (
           <View key={i} style={styles.row}>
             <View style={{ flex: 1 }}>
@@ -339,10 +311,7 @@ export function ProposalCard({
             <Text
               style={[
                 styles.amount,
-                {
-                  color:
-                    item.type === "expense" ? colors.expense : colors.income,
-                },
+                { color: item.type === 'expense' ? colors.expense : colors.income },
               ]}
             >
               {formatMoney(item.amount, item.currency, item.type)}
@@ -355,7 +324,7 @@ export function ProposalCard({
           <Text style={styles.amount}>
             {proposal.previous_amount
               ? `${formatMoney(proposal.previous_amount, proposal.currency)} → `
-              : ""}
+              : ''}
             {formatMoney(proposal.amount, proposal.currency)}
           </Text>
         </View>
@@ -364,16 +333,11 @@ export function ProposalCard({
         <>
           <View style={styles.actions}>
             <View style={{ flex: 1 }}>
-              <Button
-                title="Zapisz"
-                onPress={save}
-                loading={confirm.isPending}
-                disabled={busy}
-              />
+              <Button title="Zapisz" onPress={save} loading={confirm.isPending} disabled={busy} />
             </View>
             <View style={{ flex: 1 }}>
               <Button
-                title={editing ? "Anuluj" : "Popraw"}
+                title={editing ? 'Anuluj' : 'Popraw'}
                 variant="secondary"
                 onPress={editing ? () => setEditing(false) : startEditing}
                 disabled={busy}
@@ -381,21 +345,13 @@ export function ProposalCard({
             </View>
           </View>
           {editing ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={discard}
-              disabled={busy}
-            >
-              <Text style={[styles.link, styles.center]}>
-                Odrzuć całą propozycję
-              </Text>
+            <Pressable accessibilityRole="button" onPress={discard} disabled={busy}>
+              <Text style={[styles.link, styles.center]}>Odrzuć całą propozycję</Text>
             </Pressable>
           ) : null}
         </>
       ) : (
-        <Text
-          style={[styles.state, state === "saved" && { color: colors.income }]}
-        >
+        <Text style={[styles.state, state === 'saved' && { color: colors.income }]}>
           {STATE_LABEL[state]}
         </Text>
       )}
@@ -414,26 +370,21 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.sm,
   },
-  title: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.muted,
-    textTransform: "uppercase",
-  },
-  row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  wrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  title: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   editor: {
     gap: spacing.sm,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  label: { fontSize: 14, color: colors.muted, fontWeight: "500" },
-  primary: { fontSize: 15, color: colors.text, fontWeight: "500" },
+  label: { fontSize: 14, color: colors.muted, fontWeight: '500' },
+  primary: { fontSize: 15, color: colors.text, fontWeight: '500' },
   secondary: { fontSize: 13, color: colors.muted },
-  amount: { fontSize: 15, fontWeight: "600", color: colors.text },
-  actions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs },
-  state: { fontSize: 14, color: colors.muted, fontWeight: "500" },
-  link: { fontSize: 14, color: colors.danger, fontWeight: "500" },
-  center: { textAlign: "center", paddingVertical: spacing.xs },
+  amount: { fontSize: 15, fontWeight: '600', color: colors.text },
+  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
+  state: { fontSize: 14, color: colors.muted, fontWeight: '500' },
+  link: { fontSize: 14, color: colors.danger, fontWeight: '500' },
+  center: { textAlign: 'center', paddingVertical: spacing.xs },
 });
