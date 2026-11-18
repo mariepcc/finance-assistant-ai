@@ -53,19 +53,13 @@ export function CategoryPicker({
         <>
           <Text style={styles.label}>Podkategoria</Text>
           <View style={styles.wrap}>
-            <Chip
-              label="Ogólnie"
-              color={parent.color ?? undefined}
-              selected={value === parent.id}
-              onPress={() => pick(parent, parent)}
-            />
             {children.map((c) => (
               <Chip
                 key={c.id}
                 label={c.name}
                 color={parent.color ?? undefined}
                 selected={value === c.id}
-                onPress={() => pick(c, parent)}
+                onPress={() => pick(value === c.id ? parent : c, parent)}
               />
             ))}
           </View>
