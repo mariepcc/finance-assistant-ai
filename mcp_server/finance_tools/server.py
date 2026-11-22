@@ -62,6 +62,19 @@ TOOLS: list[ToolSpec] = [
         "Niczego nie zapisuje.",
     ),
     ToolSpec(
+        analysis.forecast_month_end,
+        "Prognoza wydatków (i salda) na koniec bieżącego miesiąca: wydano do dziś, zaplanowane "
+        "stałe płatności i zakres wydatków zmiennych w pozostałych dniach (niska, typowa, "
+        "wysoka) na podstawie historii; opcjonalnie dla jednej kategorii z porównaniem "
+        "z limitem.",
+    ),
+    ToolSpec(
+        analysis.detect_anomalies,
+        "Nietypowo wysokie wydatki w okresie: pojedyncze transakcje wyraźnie powyżej mediany "
+        "swojej podkategorii oraz kategorie z sumą wyraźnie powyżej typowego miesiąca. "
+        "Zwraca też zastosowane progi.",
+    ),
+    ToolSpec(
         budgets.get_budget_status,
         "Wykorzystanie miesięcznych limitów kategorii: limit, wydano, pozostało, procent, status "
         "(ok, warning od 80%, exceeded).",

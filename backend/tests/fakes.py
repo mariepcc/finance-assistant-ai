@@ -18,6 +18,8 @@ TOOL_CATEGORIES = {
     "get_breakdown_by_category": "analysis",
     "compare_periods": "analysis",
     "simulate_purchase": "analysis",
+    "forecast_month_end": "analysis",
+    "detect_anomalies": "analysis",
     "get_budget_status": "budgets",
     "propose_budget": "budgets",
     "list_recurring": "recurring",

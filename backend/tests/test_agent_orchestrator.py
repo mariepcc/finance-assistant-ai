@@ -4,6 +4,7 @@ from typing import Any
 from app.agent import prompts
 from app.agent.orchestrator import TIMEOUT_MESSAGE, ChatInput, Orchestrator, chunk_text
 from app.agent.router import RouteDecision
+from app.agent.tools import ToolOutcome
 from app.agent.types import ChatTurn, Event
 from app.agent.worker import NEED_OTHER_TOOLS
 from app.config import Settings
@@ -221,3 +222,37 @@ async def test_recurring_worker_proposes_with_own_tools() -> None:
         "list_categories",
         NEED_OTHER_TOOLS,
     }
+
+
+async def test_analysis_worker_explains_anomaly_with_verified_numbers() -> None:
+    anomalies = {
+        "currency": "PLN",
+        "transactions": [
+            {
+                "occurred_on": "2026-11-03",
+                "amount": "486.00",
+                "note": "kolacja urodzinowa",
+                "median_amount": "50.00",
+                "times_median": "9.7",
+            }
+        ],
+        "categories": [],
+    }
+    gateway = FakeGateway()
+    gateway.handlers["detect_anomalies"] = lambda _: ToolOutcome(anomalies, False)
+    llm = FakeLLM(
+        routes=routes(["analysis"]),
+        steps={
+            "analysis": [
+                tool_step(("detect_anomalies", {})),
+                text_step(
+                    "Wyróżnia się kolacja urodzinowa za 486,00 zł, 9,7 raza więcej niż typowe "
+                    "50,00 zł w restauracjach."
+                ),
+            ]
+        },
+    )
+    events = await collect(llm, gateway, message="Czy było coś nietypowego?")
+    assert done(events)["verified"] is True
+    assert prompts.TOOL_STATUS["detect_anomalies"] in statuses(events)
+    assert {"forecast_month_end", "detect_anomalies"} <= llm.step_tools[0]

@@ -71,6 +71,11 @@ SUBCATEGORY_BY_NOTE = {
 }
 FALLBACK_SUBCATEGORY = {"Zakupy": "Inne zakupy"}
 
+UNUSUAL_THIS_MONTH: list[tuple[int, str, str, str]] = [
+    (3, "Restauracje", "486.00", "kolacja urodzinowa"),
+    (6, "Elektronika", "1299.00", "nowy telefon"),
+]
+
 BUDGETS = {"Jedzenie": "1200.00", "Transport": "250.00", "Rozrywka": "300.00", "Zakupy": "400.00"}
 
 
@@ -153,6 +158,18 @@ def build_transactions(
                 amount = Decimal(str(round(rng.uniform(low, high), 2)))
                 add(day, category, amount, TransactionType.EXPENSE, rng.choice(notes))
         day += timedelta(days=1)
+    for dom, leaf, fixed, note in UNUSUAL_THIS_MONTH:
+        result.append(
+            Transaction(
+                user_id=user_id,
+                type=TransactionType.EXPENSE,
+                amount=Decimal(fixed),
+                currency="PLN",
+                category_id=categories[leaf],
+                occurred_on=today.replace(day=min(dom, today.day)),
+                note=note,
+            )
+        )
     return result
 
 

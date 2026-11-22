@@ -16,6 +16,8 @@ TOOL_CATEGORIES: dict[str, ToolCategory] = {
     "get_breakdown_by_category": ToolCategory.ANALYSIS,
     "compare_periods": ToolCategory.ANALYSIS,
     "simulate_purchase": ToolCategory.ANALYSIS,
+    "forecast_month_end": ToolCategory.ANALYSIS,
+    "detect_anomalies": ToolCategory.ANALYSIS,
     "get_budget_status": ToolCategory.BUDGETS,
     "propose_budget": ToolCategory.BUDGETS,
     "list_categories": ToolCategory.CATEGORIES,

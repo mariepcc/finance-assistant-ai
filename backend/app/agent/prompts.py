@@ -23,6 +23,8 @@ TOOL_STATUS: dict[str, str] = {
     "get_breakdown_by_category": "Rozbijam wydatki na kategorie…",
     "compare_periods": "Porównuję okresy…",
     "simulate_purchase": "Symuluję zakup…",
+    "forecast_month_end": "Szacuję koniec miesiąca…",
+    "detect_anomalies": "Szukam nietypowych wydatków…",
     "get_budget_status": "Sprawdzam budżety…",
     "propose_budget": "Przygotowuję zmianę budżetu…",
     "list_recurring": "Sprawdzam stałe płatności…",
@@ -51,7 +53,9 @@ Grupy:
 - transactions: zapisanie nowego wydatku lub przychodu podanego w wiadomości (np. „kawa 14 zł”), \
 wyszukanie konkretnych transakcji (np. „pokaż moje wydatki na paliwo”).
 - analysis: sumy i salda w okresie, rozbicie wydatków na kategorie, porównanie okresów, \
-symulacja „czy stać mnie na zakup”.
+symulacja „czy stać mnie na zakup”, prognoza wydatków lub salda do końca miesiąca („ile wydam \
+do końca miesiąca”, „czy starczy mi do wypłaty”, „czy zmieszczę się w budżecie do końca \
+miesiąca”), nietypowe lub podejrzanie wysokie wydatki.
 - budgets: stan miesięcznych limitów kategorii, ustawienie lub zmiana limitu.
 - recurring: stałe płatności, które powtarzają się co miesiąc lub co rok (subskrypcje, \
 czynsz, rachunki, pensja): dodanie nowej (np. „Spotify 23,99 zł co miesiąc”), lista stałych \
@@ -113,6 +117,16 @@ z list_categories (np. słuchawki to Elektronika) i napisz, jaką kategorię prz
 - Odpowiedź o zakupie opieraj na wyniku symulacji: czy zakup mieści się w limicie kategorii \
 (budget_remaining_after, exceeds_budget) i jakie będzie saldo miesiąca po zakupie \
 (month_balance_after; saldo to przychody minus wydatki w miesiącu).
+- Pytania o koniec miesiąca („ile wydam do końca miesiąca”, „czy starczy mi pieniędzy”, „czy \
+zmieszczę się w limicie do końca miesiąca”): forecast_month_end, dla jednej kategorii \
+z parametrem category. Podaj typową wartość month_end_expense i zakres od low do high, \
+a przy pytaniu o pieniądze także month_end_balance. Powiedz krótko, że to szacunek na podstawie \
+dotychczasowych wydatków i zaplanowanych stałych płatności. Gdy method to current_pace, dodaj, \
+że historii jest mało, więc szacunek opiera się na tempie z tego miesiąca.
+- Pytania o nietypowe wydatki: detect_anomalies. Przy każdej pozycji podaj kwotę, datę lub \
+notatkę, typową kwotę (median_amount) i ile razy jest większa (times_median); przy kategoriach \
+sumę, oczekiwaną kwotę i krotność. Gdy obie listy są puste, powiedz, że nic nie odbiega od \
+normy. Nie oceniaj, czy wydatek był rozsądny.
 - Zmiany i różnice podawaj tylko wtedy, gdy zwróciło je narzędzie.""",
     "budgets": """Twoja rola: miesięczne budżety (limity kategorii).
 - Stan limitów: get_budget_status. Ustawienie lub zmiana limitu: propose_budget.
@@ -144,8 +158,8 @@ krótko i życzliwie. {today}
 Ta wiadomość nie wymaga danych z konta, więc nie podawaj żadnych kwot ani liczb o finansach \
 użytkownika. Jeśli to pasuje, powiedz, w czym pomagasz: zapisywanie wydatków i przychodów \
 zwykłym zdaniem (zapis po potwierdzeniu), pytania o sumy, kategorie i porównania okresów, stan \
-budżetów, stałe płatności (subskrypcje zapisywane automatycznie co miesiąc lub co rok) oraz \
-symulacje zakupów."""
+budżetów, stałe płatności (subskrypcje zapisywane automatycznie co miesiąc lub co rok), \
+symulacje zakupów, prognozę wydatków do końca miesiąca i wykrywanie nietypowych wydatków."""
 
 EDITOR_SYSTEM = """Scalasz odpowiedzi dwóch asystentów na jedno pytanie użytkownika w jedną \
 spójną, krótką wypowiedź po polsku, bez nagłówków. Przepisuj liczby dokładnie tak, jak są \

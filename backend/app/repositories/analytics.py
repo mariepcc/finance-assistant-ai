@@ -33,6 +33,18 @@ class CategoryTotal:
 
 
 @dataclass(frozen=True, slots=True)
+class ExpenseRow:
+    occurred_on: date
+    amount: Decimal
+    category_id: UUID
+    category: str
+    main_id: UUID
+    main: str
+    note: str | None
+    recurring: bool
+
+
+@dataclass(frozen=True, slots=True)
 class BudgetUsage:
     budget: Budget
     category_name: str
@@ -146,3 +158,57 @@ async def budget_usage(
     return [
         BudgetUsage(budget=b, category_name=name, spent=Decimal(s) + ZERO) for b, name, s in rows
     ]
+
+
+async def expense_rows(
+    session: AsyncSession,
+    user_id: UUID,
+    date_from: date,
+    date_to: date,
+    category_id: UUID | None = None,
+) -> list[ExpenseRow]:
+    leaf = aliased(Category)
+    main = aliased(Category)
+    stmt = (
+        select(
+            Transaction.occurred_on,
+            Transaction.amount,
+            leaf.id,
+            leaf.name,
+            main.id,
+            main.name,
+            Transaction.note,
+            Transaction.recurring_id,
+        )
+        .join(leaf, leaf.id == Transaction.category_id)
+        .join(main, main.id == func.coalesce(leaf.parent_id, leaf.id))
+        .where(
+            Transaction.user_id == user_id,
+            Transaction.type == TransactionType.EXPENSE,
+            Transaction.occurred_on >= date_from,
+            Transaction.occurred_on <= date_to,
+        )
+        .order_by(Transaction.occurred_on, Transaction.created_at)
+    )
+    if category_id is not None:
+        stmt = stmt.where(in_scope(category_id, user_id))
+    rows = (await session.execute(stmt)).all()
+    return [
+        ExpenseRow(
+            occurred_on=day,
+            amount=Decimal(amount) + ZERO,
+            category_id=cid,
+            category=cname,
+            main_id=mid,
+            main=mname,
+            note=note,
+            recurring=rid is not None,
+        )
+        for day, amount, cid, cname, mid, mname, note, rid in rows
+    ]
+
+
+async def first_transaction_on(session: AsyncSession, user_id: UUID) -> date | None:
+    return await session.scalar(
+        select(func.min(Transaction.occurred_on)).where(Transaction.user_id == user_id)
+    )

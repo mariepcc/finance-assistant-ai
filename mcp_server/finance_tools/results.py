@@ -218,3 +218,69 @@ class RecurringProposalResult(BaseModel):
     first_payment_on: date
     monthly_amount: Amount
     requires_user_confirmation: bool = True
+
+
+Ratio = Annotated[Decimal, PlainSerializer(lambda v: f"{v:.1f}", return_type=str)]
+
+
+class ForecastRange(BaseModel):
+    low: Amount
+    typical: Amount
+    high: Amount
+
+
+class ForecastResult(BaseModel):
+    currency: str
+    month: Period
+    category: str | None
+    subcategory: str | None
+    days_elapsed: int
+    days_remaining: int
+    spent_to_date: Amount
+    planned_recurring_expense: Amount
+    variable_spending_remaining: ForecastRange
+    month_end_expense: ForecastRange
+    current_pace_projection: Amount
+    method: Literal["history_windows", "current_pace"]
+    history_days: int
+    income_to_date: Amount | None = None
+    planned_recurring_income: Amount | None = None
+    month_end_balance: ForecastRange | None = None
+    budget_limit: Amount | None = None
+    likely_exceeds_budget: bool | None = None
+
+
+class AnomalyItem(BaseModel):
+    occurred_on: date
+    amount: Amount
+    category: str
+    subcategory: str | None
+    note: str | None
+    compared_with: str
+    median_amount: Amount
+    times_median: Ratio
+    history_count: int
+
+
+class CategoryAnomalyItem(BaseModel):
+    category: str
+    total: Amount
+    expected: Amount
+    median_month_total: Amount
+    times_expected: Ratio
+    months_compared: int
+
+
+class AnomalyRules(BaseModel):
+    transaction: str
+    category: str
+
+
+class AnomaliesResult(BaseModel):
+    currency: str
+    period: Period
+    transactions: list[AnomalyItem]
+    categories: list[CategoryAnomalyItem]
+    partial_period: bool
+    category_check_done: bool
+    rules: AnomalyRules

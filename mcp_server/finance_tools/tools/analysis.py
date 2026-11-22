@@ -4,15 +4,22 @@ from typing import Annotated
 
 from app.models import TransactionType
 from app.repositories import analytics
+from app.services import insights
 from pydantic import Field
 
 from finance_tools.context import main_category, month_of, period, resolve_category, tool_context
 from finance_tools.results import (
+    AnomaliesResult,
+    AnomalyItem,
+    AnomalyRules,
     BreakdownResult,
+    CategoryAnomalyItem,
     CategoryComparison,
     CategoryShare,
     Change,
     CompareResult,
+    ForecastRange,
+    ForecastResult,
     Period,
     PeriodTotals,
     SimulationResult,
@@ -193,4 +200,115 @@ async def simulate_purchase(
             exceeds_budget=spent_after > limit if limit is not None else None,
             month_balance_before=month_totals.balance,
             month_balance_after=month_totals.balance - amount,
+        )
+
+
+def _range(r: insights.Range) -> ForecastRange:
+    return ForecastRange(low=r.low, typical=r.typical, high=r.high)
+
+
+async def forecast_month_end(
+    category: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Opcjonalnie kategoria lub podkategoria wydatków, np. Jedzenie. "
+                "Bez tego prognoza wszystkich wydatków i salda."
+            )
+        ),
+    ] = None,
+) -> ForecastResult:
+    today = date.today()
+    async with tool_context() as ctx:
+        found = main = None
+        if category is not None:
+            found = await resolve_category(ctx, category, TransactionType.EXPENSE)
+            main = await main_category(ctx, found)
+        f = await insights.forecast_month_end(
+            ctx.session,
+            ctx.user_id,
+            today,
+            found.id if found else None,
+            main.id if main and found and main.id == found.id else None,
+        )
+        return ForecastResult(
+            currency=ctx.currency,
+            month=Period(date_from=f.month_start, date_to=f.month_end),
+            category=main.name if main else None,
+            subcategory=found.name if found and main and found.id != main.id else None,
+            days_elapsed=f.days_elapsed,
+            days_remaining=f.days_remaining,
+            spent_to_date=f.spent_to_date,
+            planned_recurring_expense=f.planned_recurring_expense,
+            variable_spending_remaining=_range(f.variable),
+            month_end_expense=_range(f.expense),
+            current_pace_projection=f.pace_projection,
+            method=f.method,
+            history_days=f.history_days,
+            income_to_date=f.income_to_date,
+            planned_recurring_income=f.planned_recurring_income,
+            month_end_balance=_range(f.balance) if f.balance else None,
+            budget_limit=f.budget_limit,
+            likely_exceeds_budget=f.likely_exceeds_budget,
+        )
+
+
+async def detect_anomalies(
+    date_from: Annotated[
+        date | None, Field(description="Początek okresu (RRRR-MM-DD); domyślnie 1. dzień miesiąca")
+    ] = None,
+    date_to: Annotated[
+        date | None, Field(description="Koniec okresu (RRRR-MM-DD); domyślnie koniec miesiąca")
+    ] = None,
+) -> AnomaliesResult:
+    today = date.today()
+    month = month_of(today)
+    p = period(date_from or month.date_from, date_to or month.date_to)
+    async with tool_context() as ctx:
+        found = await insights.detect_anomalies(
+            ctx.session, ctx.user_id, p.date_from, p.date_to, today
+        )
+        return AnomaliesResult(
+            currency=ctx.currency,
+            period=p,
+            transactions=[
+                AnomalyItem(
+                    occurred_on=a.occurred_on,
+                    amount=a.amount,
+                    category=a.category,
+                    subcategory=a.subcategory,
+                    note=a.note,
+                    compared_with=a.compared_with,
+                    median_amount=a.median,
+                    times_median=a.ratio,
+                    history_count=a.history_count,
+                )
+                for a in found.transactions
+            ],
+            categories=[
+                CategoryAnomalyItem(
+                    category=c.category,
+                    total=c.total,
+                    expected=c.expected,
+                    median_month_total=c.median_month,
+                    times_expected=c.ratio,
+                    months_compared=c.months_compared,
+                )
+                for c in found.categories
+            ],
+            partial_period=found.partial_period,
+            category_check_done=found.category_check,
+            rules=AnomalyRules(
+                transaction=(
+                    "wydatek co najmniej 3 razy większy od mediany podkategorii z ostatnich "
+                    "180 dni (kategorii głównej, gdy podkategoria ma mniej niż 5 wydatków; "
+                    "patrz compared_with) i większy od niej o co najmniej 50 zł; stałe "
+                    "płatności pominięte"
+                ),
+                category=(
+                    "suma kategorii co najmniej 1,5 raza większa od mediany z 3 poprzednich "
+                    "miesięcy (przeskalowanej dla niepełnego miesiąca) i większa o co najmniej "
+                    "100 zł; stałe płatności pominięte"
+                ),
+            ),
         )
