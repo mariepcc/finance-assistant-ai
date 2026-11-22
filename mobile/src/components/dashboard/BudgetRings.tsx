@@ -1,16 +1,18 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Line } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
+import { mix } from '@/lib/colors';
 import { formatMoney, formatPct } from '@/lib/format';
 import type { Dashboard, DashboardBudget } from '@/lib/types';
 
-import { colors, spacing, status } from '../theme';
+import { colors, radius, spacing, status } from '../theme';
 
-const SIZE = 92;
-const STROKE = 10;
+const SIZE = 96;
+const STROKE = 7;
 const AHEAD_MARGIN = 10;
+const FALLBACK = '#94A3B8';
 
 type Pace = 'ok' | 'ahead' | 'exceeded' | 'near';
 
@@ -30,23 +32,39 @@ function paceOf(b: DashboardBudget, expected: number | null): Pace {
   return Number(b.used_pct) > expected + AHEAD_MARGIN ? 'ahead' : 'ok';
 }
 
-function Ring({ used, expected, color }: { used: number; expected: number | null; color: string }) {
-  const r = (SIZE - STROKE) / 2;
+function Ring({
+  id,
+  used,
+  expected,
+  color,
+}: {
+  id: string;
+  used: number;
+  expected: number | null;
+  color: string;
+}) {
+  const r = (SIZE - STROKE) / 2 - 3;
   const c = SIZE / 2;
   const circumference = 2 * Math.PI * r;
   const filled = Math.min(used, 100) / 100;
+  const overflow = Math.min(Math.max(used - 100, 0), 100) / 100;
   const tick = expected !== null ? (Math.min(expected, 100) / 100) * Math.PI * 2 : null;
-  const inner = r - STROKE / 2 - 2;
-  const outer = r + STROKE / 2 + 2;
+  const gradient = `ring-${id}`;
   return (
     <Svg width={SIZE} height={SIZE}>
-      <Circle cx={c} cy={c} r={r} stroke={status.track} strokeWidth={STROKE} fill="none" />
+      <Defs>
+        <LinearGradient id={gradient} x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor={mix(color, 0.45)} />
+          <Stop offset="1" stopColor={color} />
+        </LinearGradient>
+      </Defs>
+      <Circle cx={c} cy={c} r={r} stroke={mix(color, 0.86)} strokeWidth={STROKE} fill="none" />
       {filled > 0 ? (
         <Circle
           cx={c}
           cy={c}
           r={r}
-          stroke={color}
+          stroke={`url(#${gradient})`}
           strokeWidth={STROKE}
           fill="none"
           strokeLinecap="round"
@@ -54,15 +72,28 @@ function Ring({ used, expected, color }: { used: number; expected: number | null
           transform={`rotate(-90 ${c} ${c})`}
         />
       ) : null}
-      {tick !== null ? (
-        <Line
-          x1={c + inner * Math.sin(tick)}
-          y1={c - inner * Math.cos(tick)}
-          x2={c + outer * Math.sin(tick)}
-          y2={c - outer * Math.cos(tick)}
-          stroke={colors.text}
-          strokeWidth={2}
+      {overflow > 0 ? (
+        <Circle
+          cx={c}
+          cy={c}
+          r={r}
+          stroke={status.exceeded}
+          strokeWidth={STROKE - 3}
+          fill="none"
           strokeLinecap="round"
+          strokeDasharray={`${circumference * overflow} ${circumference}`}
+          transform={`rotate(-90 ${c} ${c})`}
+          opacity={0.9}
+        />
+      ) : null}
+      {tick !== null ? (
+        <Circle
+          cx={c + r * Math.sin(tick)}
+          cy={c - r * Math.cos(tick)}
+          r={3.5}
+          fill={colors.card}
+          stroke={colors.muted}
+          strokeWidth={1.5}
         />
       ) : null}
     </Svg>
@@ -87,6 +118,7 @@ export function BudgetRings({ data }: { data: Dashboard }) {
         {budgets.map((b) => {
           const pace = paceOf(b, expected);
           const p = PACE[pace];
+          const color = b.color ?? FALLBACK;
           const remaining = Number(b.remaining);
           const perDay = data.is_current && remaining > 0 ? remaining / daysLeft : null;
           return (
@@ -99,17 +131,25 @@ export function BudgetRings({ data }: { data: Dashboard }) {
               }, ${p.label}`}
             >
               <View style={styles.ringWrap}>
-                <Ring used={Number(b.used_pct)} expected={expected} color={p.color} />
+                <Ring
+                  id={b.category_id}
+                  used={Number(b.used_pct)}
+                  expected={expected}
+                  color={color}
+                />
                 <View style={styles.ringCenter}>
-                  <Text style={styles.pct}>{Math.round(Number(b.used_pct))}%</Text>
+                  <Text style={styles.pct}>
+                    {Math.round(Number(b.used_pct))}
+                    <Text style={styles.pctSign}>%</Text>
+                  </Text>
                 </View>
               </View>
               <Text style={styles.name} numberOfLines={1}>
                 {b.category}
               </Text>
-              <View style={styles.status}>
-                <Ionicons name={p.icon} size={14} color={p.color} />
-                <Text style={styles.statusText}>{p.label}</Text>
+              <View style={[styles.pill, { backgroundColor: mix(p.color, 0.88) }]}>
+                <Ionicons name={p.icon} size={12} color={p.color} />
+                <Text style={styles.pillText}>{p.label}</Text>
               </View>
               <Text style={styles.detail}>
                 {remaining >= 0
@@ -117,7 +157,7 @@ export function BudgetRings({ data }: { data: Dashboard }) {
                   : `ponad limit ${formatMoney(String(-remaining), currency)}`}
               </Text>
               {perDay !== null ? (
-                <Text style={styles.detail}>
+                <Text style={styles.detailSoft}>
                   ~{formatMoney(perDay.toFixed(2), currency)} dziennie
                 </Text>
               ) : null}
@@ -129,7 +169,7 @@ export function BudgetRings({ data }: { data: Dashboard }) {
         <View style={styles.legend}>
           <View style={styles.tickSwatch} />
           <Text style={styles.legendText}>
-            kreska = równe tempo na dziś ({data.days_elapsed}. dzień z {data.days_in_month})
+            równe tempo na dziś ({data.days_elapsed}. dzień z {data.days_in_month})
           </Text>
         </View>
       ) : null}
@@ -139,8 +179,8 @@ export function BudgetRings({ data }: { data: Dashboard }) {
 
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.lg },
-  tile: { width: '50%', alignItems: 'center', gap: 3, paddingHorizontal: spacing.xs },
-  ringWrap: { width: SIZE, height: SIZE, marginBottom: spacing.xs },
+  tile: { width: '50%', alignItems: 'center', gap: 4, paddingHorizontal: spacing.xs },
+  ringWrap: { width: SIZE, height: SIZE, marginBottom: 2 },
   ringCenter: {
     position: 'absolute',
     top: 0,
@@ -150,13 +190,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pct: { fontSize: 18, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] },
+  pct: {
+    fontSize: 22,
+    fontWeight: '300',
+    color: colors.text,
+    fontVariant: ['tabular-nums'],
+    letterSpacing: -0.5,
+  },
+  pctSign: { fontSize: 13, fontWeight: '400', color: colors.muted },
   name: { fontSize: 15, fontWeight: '600', color: colors.text },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statusText: { fontSize: 12, color: colors.text },
-  detail: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  pillText: { fontSize: 11, fontWeight: '600', color: colors.text },
+  detail: { fontSize: 12, color: colors.text, fontVariant: ['tabular-nums'] },
+  detailSoft: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
   legend: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, justifyContent: 'center' },
-  tickSwatch: { width: 2, height: 12, borderRadius: 1, backgroundColor: colors.text },
+  tickSwatch: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.muted,
+    backgroundColor: colors.card,
+  },
   legendText: { fontSize: 12, color: colors.muted },
   empty: { fontSize: 14, color: colors.muted, lineHeight: 20, marginTop: -spacing.xs },
 });
