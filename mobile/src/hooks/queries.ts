@@ -16,6 +16,8 @@ export const keys = {
   transaction: (id: string) => ['transaction', id] as const,
   recurringList: ['recurring', 'list'] as const,
   dashboard: (month: string) => ['dashboard', month] as const,
+  budgets: (month: string) => ['budgets', month] as const,
+  budgetSuggestions: ['budgets', 'suggestions'] as const,
   recurring: (id: string) => ['recurring', id] as const,
 };
 
@@ -72,12 +74,44 @@ export function useDashboard(month: string) {
   });
 }
 
+export function useBudgets(month: string) {
+  return useQuery({
+    queryKey: keys.budgets(month),
+    queryFn: () => api.budgets(month),
+    placeholderData: (previous) => previous,
+  });
+}
+
+export function useBudgetSuggestions() {
+  return useQuery({ queryKey: keys.budgetSuggestions, queryFn: api.budgetSuggestions });
+}
+
+function useInvalidateBudgets() {
+  const qc = useQueryClient();
+  return () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ['budgets'] }),
+      qc.invalidateQueries({ queryKey: ['dashboard'] }),
+    ]);
+}
+
+export function useSaveBudget() {
+  const invalidate = useInvalidateBudgets();
+  return useMutation({ mutationFn: api.saveBudget, onSuccess: invalidate });
+}
+
+export function useDeleteBudget() {
+  const invalidate = useInvalidateBudgets();
+  return useMutation({ mutationFn: api.deleteBudget, onSuccess: invalidate });
+}
+
 function useInvalidateTransactions() {
   const qc = useQueryClient();
   return () =>
     Promise.all([
       qc.invalidateQueries({ queryKey: ['transactions'] }),
       qc.invalidateQueries({ queryKey: ['dashboard'] }),
+      qc.invalidateQueries({ queryKey: ['budgets'] }),
     ]);
 }
 
@@ -132,6 +166,7 @@ function useInvalidateRecurring() {
       qc.invalidateQueries({ queryKey: ['recurring'] }),
       qc.invalidateQueries({ queryKey: ['transactions'] }),
       qc.invalidateQueries({ queryKey: ['dashboard'] }),
+      qc.invalidateQueries({ queryKey: ['budgets'] }),
     ]);
 }
 

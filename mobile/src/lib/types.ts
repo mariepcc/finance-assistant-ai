@@ -149,6 +149,38 @@ export interface Dashboard {
   forecast: { low: string; typical: string; high: string } | null;
 }
 
+export interface BudgetItem {
+  category_id: string;
+  category: string;
+  color: string | null;
+  limit: string;
+  spent: string;
+  remaining: string;
+  used_pct: string;
+  status: BudgetStatus;
+  forecast_typical: string | null;
+  average_monthly: string | null;
+}
+
+export interface BudgetsOverview {
+  month: string;
+  is_current: boolean;
+  days_elapsed: number;
+  days_in_month: number;
+  currency: string;
+  total_limit: string;
+  total_spent: string;
+  items: BudgetItem[];
+}
+
+export interface BudgetSuggestion {
+  category_id: string;
+  category: string;
+  color: string | null;
+  average_monthly: string | null;
+  has_budget: boolean;
+}
+
 export interface ProposedItem {
   type: TransactionType;
   amount: string;

@@ -1,16 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
-import { mix, shade } from '@/lib/colors';
+import { mix } from '@/lib/colors';
 import { formatMoney, formatPct } from '@/lib/format';
 import type { Dashboard, DashboardBudget } from '@/lib/types';
 
+import { BudgetRing } from '../BudgetRing';
 import { colors, radius, spacing, status } from '../theme';
 
 const SIZE = 96;
-const STROKE = 7;
 const AHEAD_MARGIN = 10;
 const FALLBACK = '#94A3B8';
 
@@ -30,73 +29,6 @@ function paceOf(b: DashboardBudget, expected: number | null): Pace {
   if (b.status === 'exceeded') return 'exceeded';
   if (expected === null) return b.status === 'warning' ? 'near' : 'ok';
   return Number(b.used_pct) > expected + AHEAD_MARGIN ? 'ahead' : 'ok';
-}
-
-function Ring({
-  id,
-  used,
-  expected,
-  color,
-}: {
-  id: string;
-  used: number;
-  expected: number | null;
-  color: string;
-}) {
-  const r = (SIZE - STROKE) / 2 - 3;
-  const c = SIZE / 2;
-  const circumference = 2 * Math.PI * r;
-  const filled = Math.min(used, 100) / 100;
-  const overflow = Math.min(Math.max(used - 100, 0), 100) / 100;
-  const tick = expected !== null ? (Math.min(expected, 100) / 100) * Math.PI * 2 : null;
-  const gradient = `ring-${id}`;
-  return (
-    <Svg width={SIZE} height={SIZE}>
-      <Defs>
-        <LinearGradient id={gradient} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor={mix(color, 0.45)} />
-          <Stop offset="1" stopColor={color} />
-        </LinearGradient>
-      </Defs>
-      <Circle cx={c} cy={c} r={r} stroke={mix(color, 0.78)} strokeWidth={STROKE} fill="none" />
-      {filled > 0 ? (
-        <Circle
-          cx={c}
-          cy={c}
-          r={r}
-          stroke={`url(#${gradient})`}
-          strokeWidth={STROKE}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={`${circumference * filled} ${circumference}`}
-          transform={`rotate(-90 ${c} ${c})`}
-        />
-      ) : null}
-      {overflow > 0 ? (
-        <Circle
-          cx={c}
-          cy={c}
-          r={r}
-          stroke={shade(color, 0.35)}
-          strokeWidth={STROKE}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={`${circumference * overflow} ${circumference}`}
-          transform={`rotate(-90 ${c} ${c})`}
-        />
-      ) : null}
-      {tick !== null ? (
-        <Circle
-          cx={c + r * Math.sin(tick)}
-          cy={c - r * Math.cos(tick)}
-          r={3.5}
-          fill={colors.card}
-          stroke={colors.muted}
-          strokeWidth={1.5}
-        />
-      ) : null}
-    </Svg>
-  );
 }
 
 export function BudgetRings({ data }: { data: Dashboard }) {
@@ -130,7 +62,7 @@ export function BudgetRings({ data }: { data: Dashboard }) {
               }, ${p.label}`}
             >
               <View style={styles.ringWrap}>
-                <Ring
+                <BudgetRing
                   id={b.category_id}
                   used={Number(b.used_pct)}
                   expected={expected}

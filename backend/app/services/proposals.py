@@ -3,7 +3,6 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.errors import (
@@ -15,7 +14,6 @@ from app.errors import (
 )
 from app.models import (
     Budget,
-    BudgetPeriod,
     Category,
     Profile,
     Proposal,
@@ -44,6 +42,7 @@ from app.schemas.proposal import (
     TransactionProposalPayload,
 )
 from app.schemas.recurring import RecurringCreate
+from app.services import budgets as budgets_service
 from app.services import recurring as recurring_service
 
 PROPOSAL_TTL = timedelta(minutes=15)
@@ -266,23 +265,7 @@ async def _confirm_budget(
     category = await categories_repo.get_for_user(session, user_id, payload.category_id)
     if category is None or category.archived_at is not None:
         raise InvalidInputError(f"Kategoria „{payload.category}” nie jest już dostępna")
-    await session.execute(
-        insert(Budget)
-        .values(
-            user_id=user_id,
-            category_id=payload.category_id,
-            amount=payload.amount,
-            period=BudgetPeriod.MONTHLY,
-        )
-        .on_conflict_do_update(
-            constraint="uq_budgets_user_category_period",
-            set_={"amount": payload.amount, "updated_at": datetime.now(UTC)},
-        )
-    )
-    budget = await analytics_repo.budget_for_category(session, user_id, payload.category_id)
-    assert budget is not None
-    await session.refresh(budget)
-    return budget
+    return await budgets_service.upsert(session, user_id, payload.category_id, payload.amount)
 
 
 async def _apply_recurring_edits(

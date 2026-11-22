@@ -1,6 +1,8 @@
 import { env } from './env';
 import { supabase } from './supabase';
 import type {
+  BudgetsOverview,
+  BudgetSuggestion,
   Category,
   ConfirmResult,
   Dashboard,
@@ -79,6 +81,15 @@ export const api = {
       method: 'POST',
       ...(edits ? { body: JSON.stringify(edits) } : {}),
     }),
+  budgets: (month?: string) => request<BudgetsOverview>(`/budgets${query({ month })}`),
+  budgetSuggestions: () => request<BudgetSuggestion[]>('/budgets/suggestions'),
+  saveBudget: ({ categoryId, amount }: { categoryId: string; amount: string }) =>
+    request<unknown>(`/budgets/${categoryId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ amount }),
+    }),
+  deleteBudget: (categoryId: string) =>
+    request<void>(`/budgets/${categoryId}`, { method: 'DELETE' }),
   dashboard: (month?: string) => request<Dashboard>(`/dashboard${query({ month })}`),
   recurringList: () => request<RecurringList>('/recurring'),
   recurring: (id: string) => request<RecurringRule>(`/recurring/${id}`),

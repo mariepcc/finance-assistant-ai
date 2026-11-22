@@ -63,6 +63,11 @@ function RootNavigator() {
         <Stack.Screen name="transaction/[id]" options={{ title: 'Transakcja' }} />
         <Stack.Screen name="recurring/index" options={{ title: 'Stałe płatności' }} />
         <Stack.Screen
+          name="budget/new"
+          options={{ title: 'Nowy budżet', presentation: 'modal' }}
+        />
+        <Stack.Screen name="budget/[categoryId]" options={{ title: 'Budżet' }} />
+        <Stack.Screen
           name="recurring/new"
           options={{ title: 'Nowa stała płatność', presentation: 'modal' }}
         />
