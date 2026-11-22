@@ -42,7 +42,7 @@ async def test_breakdown_inside_category_and_search_by_parent(
     assert food["total"] == "79.00"
     assert [(r["category"], r["amount"]) for r in food["categories"]] == [
         ("Restauracje", "45.00"),
-        ("Jedzenie (bez podkategorii)", "20.00"),
+        ("Pozostałe", "20.00"),
         ("Kawiarnie", "14.00"),
     ]
     assert from_sub["parent_category"] == "Jedzenie"

@@ -25,11 +25,11 @@ RECURRING: list[tuple[int, str, str, TransactionType, str | None]] = [
 ]
 
 RANDOM_SPENDING: list[tuple[str, tuple[str | None, ...], float, float, float]] = [
-    ("Jedzenie", ("Biedronka", "Lidl", "Żabka", "kawa", "obiad", None), 0.9, 8, 180),
-    ("Transport", ("bilet", "Bolt", "paliwo", None), 0.45, 4.4, 160),
-    ("Rozrywka", ("kino", "koncert", "książka", None), 0.12, 25, 220),
-    ("Zakupy", ("ubrania", "Rossmann", "Allegro", None), 0.15, 20, 350),
-    ("Zdrowie", ("apteka", "dentysta", None), 0.05, 15, 300),
+    ("Jedzenie", ("Biedronka", "Lidl", "Żabka", "kawa", "obiad", "Pyszne"), 0.9, 8, 180),
+    ("Transport", ("bilet", "Bolt", "paliwo", "tramwaj"), 0.45, 4.4, 160),
+    ("Rozrywka", ("kino", "koncert", "książka", "teatr"), 0.12, 25, 220),
+    ("Zakupy", ("ubrania", "Rossmann", "Allegro", "Media Expert"), 0.15, 20, 350),
+    ("Zdrowie", ("apteka", "dentysta", "siłownia"), 0.05, 15, 300),
     ("Inne", (None,), 0.04, 10, 120),
 ]
 
@@ -43,17 +43,22 @@ SUBCATEGORY_BY_NOTE = {
     "Żabka": "Spożywcze",
     "kawa": "Kawiarnie",
     "obiad": "Restauracje",
+    "Pyszne": "Zamówienia online",
     "bilet": "Komunikacja miejska",
+    "tramwaj": "Komunikacja miejska",
     "Bolt": "Taksówki",
     "paliwo": "Paliwo",
     "kino": "Kino",
     "koncert": "Koncerty",
     "książka": "Książki",
+    "teatr": "Kultura",
     "ubrania": "Ubrania",
     "Rossmann": "Drogeria",
     "Allegro": "Inne zakupy",
+    "Media Expert": "Elektronika",
     "apteka": "Apteka",
     "dentysta": "Lekarz",
+    "siłownia": "Sport",
 }
 FALLBACK_SUBCATEGORY = {"Zakupy": "Inne zakupy"}
 

@@ -20,6 +20,8 @@ from finance_tools.results import (
     percent,
 )
 
+OTHER_LABEL = "Pozostałe"
+
 DateFrom = Annotated[date, Field(description="Początek okresu (RRRR-MM-DD)")]
 DateTo = Annotated[date, Field(description="Koniec okresu włącznie (RRRR-MM-DD)")]
 
@@ -57,6 +59,7 @@ async def get_breakdown_by_category(
         Field(
             description=(
                 "Opcjonalnie kategoria główna, np. Jedzenie: rozbicie na jej podkategorie. "
+                "Pozycja Pozostałe to wydatki bez podkategorii. "
                 "Bez tego rozbicie na kategorie główne."
             )
         ),
@@ -80,9 +83,7 @@ async def get_breakdown_by_category(
             categories=[
                 CategoryShare(
                     category=(
-                        f"{r.name} (bez podkategorii)"
-                        if parent is not None and r.category_id == parent.id
-                        else r.name
+                        OTHER_LABEL if parent is not None and r.category_id == parent.id else r.name
                     ),
                     amount=r.total,
                     share_pct=percent(r.total, total),
