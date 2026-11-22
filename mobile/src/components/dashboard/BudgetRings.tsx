@@ -3,7 +3,7 @@ import type { ComponentProps } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
-import { mix } from '@/lib/colors';
+import { mix, shade } from '@/lib/colors';
 import { formatMoney, formatPct } from '@/lib/format';
 import type { Dashboard, DashboardBudget } from '@/lib/types';
 
@@ -58,7 +58,7 @@ function Ring({
           <Stop offset="1" stopColor={color} />
         </LinearGradient>
       </Defs>
-      <Circle cx={c} cy={c} r={r} stroke={mix(color, 0.72)} strokeWidth={STROKE} fill="none" />
+      <Circle cx={c} cy={c} r={r} stroke={mix(color, 0.86)} strokeWidth={STROKE} fill="none" />
       {filled > 0 ? (
         <Circle
           cx={c}
@@ -77,13 +77,12 @@ function Ring({
           cx={c}
           cy={c}
           r={r}
-          stroke={status.exceeded}
-          strokeWidth={STROKE - 3}
+          stroke={shade(color, 0.35)}
+          strokeWidth={STROKE}
           fill="none"
           strokeLinecap="round"
           strokeDasharray={`${circumference * overflow} ${circumference}`}
           transform={`rotate(-90 ${c} ${c})`}
-          opacity={0.9}
         />
       ) : null}
       {tick !== null ? (
@@ -124,7 +123,7 @@ export function BudgetRings({ data }: { data: Dashboard }) {
           return (
             <View
               key={b.category_id}
-              style={[styles.tile, { backgroundColor: mix(color, 0.9) }]}
+              style={styles.tile}
               accessible
               accessibilityLabel={`${b.category}: wykorzystano ${formatPct(b.used_pct)} z ${
                 formatMoney(b.limit, currency)
@@ -178,15 +177,8 @@ export function BudgetRings({ data }: { data: Dashboard }) {
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
-  tile: {
-    width: '48.5%',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.lg },
+  tile: { width: '50%', alignItems: 'center', gap: 4, paddingHorizontal: spacing.xs },
   ringWrap: { width: SIZE, height: SIZE, marginBottom: 2 },
   ringCenter: {
     position: 'absolute',
@@ -213,11 +205,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: colors.bg,
   },
   pillText: { fontSize: 11, fontWeight: '600', color: colors.text },
   detail: { fontSize: 12, color: colors.text, fontVariant: ['tabular-nums'] },
-  detailSoft: { fontSize: 12, color: colors.text, opacity: 0.6, fontVariant: ['tabular-nums'] },
+  detailSoft: { fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
   legend: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, justifyContent: 'center' },
   tickSwatch: {
     width: 8,

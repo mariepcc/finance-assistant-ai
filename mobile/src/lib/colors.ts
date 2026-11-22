@@ -7,3 +7,10 @@ export function mix(hex: string, amount: number): string {
   const out = (channel(16) << 16) | (channel(8) << 8) | channel(0);
   return `#${out.toString(16).padStart(6, '0')}`;
 }
+
+export function shade(hex: string, amount: number): string {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const channel = (shift: number) => Math.round(((n >> shift) & 255) * (1 - amount));
+  const out = (channel(16) << 16) | (channel(8) << 8) | channel(0);
+  return `#${out.toString(16).padStart(6, '0')}`;
+}
