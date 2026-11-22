@@ -58,6 +58,8 @@ function query(params: Record<string, string | number | undefined>): string {
 
 export const api = {
   me: () => request<Profile>('/me'),
+  updateMe: (input: { display_name: string }) =>
+    request<Profile>('/me', { method: 'PATCH', body: JSON.stringify(input) }),
   acceptConsent: (default_currency: string) =>
     request<Profile>('/me/consent', {
       method: 'POST',

@@ -35,6 +35,14 @@ export function useAcceptConsent() {
   });
 }
 
+export function useUpdateMe() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.updateMe,
+    onSuccess: (profile) => qc.setQueryData(keys.me, profile),
+  });
+}
+
 export function useCategories(kind?: TransactionType) {
   return useQuery({
     queryKey: keys.categories(kind),
