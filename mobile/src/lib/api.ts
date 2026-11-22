@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import type {
   Category,
   ConfirmResult,
+  Dashboard,
   Profile,
   ProposalEdits,
   RecurringInput,
@@ -76,6 +77,7 @@ export const api = {
       method: 'POST',
       ...(edits ? { body: JSON.stringify(edits) } : {}),
     }),
+  dashboard: (month?: string) => request<Dashboard>(`/dashboard${query({ month })}`),
   recurringList: () => request<RecurringList>('/recurring'),
   recurring: (id: string) => request<RecurringRule>(`/recurring/${id}`),
   createRecurring: (input: RecurringInput) =>

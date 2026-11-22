@@ -4,26 +4,15 @@ from typing import Annotated
 from app.repositories import analytics
 from app.schemas.proposal import BudgetProposalPayload
 from app.services import proposals as proposals_service
+from app.services.budget_status import budget_state, used_pct
 from pydantic import Field
 
 from finance_tools.context import parse_month, tool_context
 from finance_tools.results import (
     BudgetLine,
     BudgetProposalResult,
-    BudgetState,
     BudgetStatusResult,
-    percent,
 )
-
-WARNING_PCT = Decimal("80")
-
-
-def _state(spent: Decimal, limit: Decimal, used: Decimal) -> BudgetState:
-    if spent > limit:
-        return "exceeded"
-    if used >= WARNING_PCT:
-        return "warning"
-    return "ok"
 
 
 async def get_budget_status(
@@ -37,7 +26,7 @@ async def get_budget_status(
         usage = await analytics.budget_usage(ctx.session, ctx.user_id, m.date_from, m.date_to)
         lines = []
         for u in usage:
-            used = percent(u.spent, u.budget.amount) or Decimal("0.0")
+            used = used_pct(u.spent, u.budget.amount)
             lines.append(
                 BudgetLine(
                     category=u.category_name,
@@ -45,7 +34,7 @@ async def get_budget_status(
                     spent=u.spent,
                     remaining=u.budget.amount - u.spent,
                     used_pct=used,
-                    status=_state(u.spent, u.budget.amount, used),
+                    status=budget_state(u.spent, u.budget.amount),
                 )
             )
         return BudgetStatusResult(

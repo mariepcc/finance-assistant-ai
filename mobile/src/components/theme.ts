@@ -11,5 +11,12 @@ export const colors = {
   danger: '#DC2626',
 };
 
+export const status = {
+  ok: '#0CA30C',
+  warning: '#FAB219',
+  exceeded: '#D03B3B',
+  track: '#EEF0F6',
+};
+
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24 };
 export const radius = { sm: 8, md: 12, pill: 999 };

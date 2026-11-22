@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { type ComponentRef, useRef, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { type ComponentRef, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -64,11 +65,19 @@ export default function ChatScreen() {
   const list = useRef<FlatList<ChatItem>>(null);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
 
+  const { q } = useLocalSearchParams<{ q?: string }>();
+
   const submit = (text: string) => {
     if (!text.trim() || sending) return;
     setDraft('');
     void send(text);
   };
+
+  useEffect(() => {
+    if (!q || sending) return;
+    router.setParams({ q: undefined });
+    void send(q);
+  }, [q, sending, send]);
 
   const renderItem = ({ item }: { item: ChatItem }) =>
     item.role === 'user' ? (

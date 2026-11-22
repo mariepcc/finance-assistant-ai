@@ -15,6 +15,7 @@ export const keys = {
   transactions: (filters: TransactionFilters) => ['transactions', filters] as const,
   transaction: (id: string) => ['transaction', id] as const,
   recurringList: ['recurring', 'list'] as const,
+  dashboard: (month: string) => ['dashboard', month] as const,
   recurring: (id: string) => ['recurring', id] as const,
 };
 
@@ -55,9 +56,21 @@ export function useTransaction(id: string) {
   return useQuery({ queryKey: keys.transaction(id), queryFn: () => api.transaction(id) });
 }
 
+export function useDashboard(month: string) {
+  return useQuery({
+    queryKey: keys.dashboard(month),
+    queryFn: () => api.dashboard(month),
+    placeholderData: (previous) => previous,
+  });
+}
+
 function useInvalidateTransactions() {
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: ['transactions'] });
+  return () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ['transactions'] }),
+      qc.invalidateQueries({ queryKey: ['dashboard'] }),
+    ]);
 }
 
 export function useCreateTransaction() {
@@ -110,6 +123,7 @@ function useInvalidateRecurring() {
     Promise.all([
       qc.invalidateQueries({ queryKey: ['recurring'] }),
       qc.invalidateQueries({ queryKey: ['transactions'] }),
+      qc.invalidateQueries({ queryKey: ['dashboard'] }),
     ]);
 }
 

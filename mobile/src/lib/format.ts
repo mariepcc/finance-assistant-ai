@@ -100,3 +100,50 @@ export function formatDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number) as [number, number, number];
   return `${d} ${MONTHS[m - 1]} ${y}`;
 }
+
+const MONTH_NAMES = [
+  'Styczeń',
+  'Luty',
+  'Marzec',
+  'Kwiecień',
+  'Maj',
+  'Czerwiec',
+  'Lipiec',
+  'Sierpień',
+  'Wrzesień',
+  'Październik',
+  'Listopad',
+  'Grudzień',
+];
+
+export function monthKey(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+}
+
+export function shiftMonth(key: string, delta: number): string {
+  const [y, m] = key.split('-').map(Number) as [number, number];
+  return monthKey(new Date(y, m - 1 + delta, 1));
+}
+
+export function monthTitle(key: string): string {
+  const [y, m] = key.split('-').map(Number) as [number, number];
+  return `${MONTH_NAMES[m - 1]} ${y}`;
+}
+
+export function shortDate(iso: string): string {
+  const [, m, d] = iso.split('-').map(Number) as [number, number, number];
+  return `${d} ${MONTHS_SHORT[m - 1]}`;
+}
+
+export function compactMoney(value: number): string {
+  if (value >= 1000) {
+    const thousands = value / 1000;
+    const digits = thousands < 10 ? 1 : 0;
+    return `${thousands.toLocaleString('pl-PL', { maximumFractionDigits: digits })} tys.`;
+  }
+  return `${Math.round(value)}`;
+}
+
+export function formatPct(value: string): string {
+  return `${value.replace('.', ',')}%`;
+}

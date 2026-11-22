@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import categories, chat, me, proposals, recurring, transactions
+from app.api import categories, chat, dashboard, me, proposals, recurring, transactions
 from app.config import get_settings
 from app.errors import (
     ConflictError,
@@ -41,6 +41,7 @@ def create_app() -> FastAPI:
     app.include_router(transactions.router)
     app.include_router(proposals.router)
     app.include_router(recurring.router)
+    app.include_router(dashboard.router)
     app.include_router(chat.router)
 
     @app.get("/health", tags=["system"])

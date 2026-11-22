@@ -86,6 +86,69 @@ export interface RecurringInput {
   month: number | null;
 }
 
+export type BudgetStatus = 'ok' | 'warning' | 'exceeded';
+
+export interface DashboardSubcategory {
+  category_id: string | null;
+  name: string;
+  amount: string;
+  share_pct: string;
+}
+
+export interface DashboardCategory {
+  category_id: string;
+  name: string;
+  color: string | null;
+  amount: string;
+  share_pct: string;
+  transaction_count: number;
+  subcategories: DashboardSubcategory[];
+}
+
+export interface DashboardBudget {
+  category_id: string;
+  category: string;
+  color: string | null;
+  limit: string;
+  spent: string;
+  remaining: string;
+  used_pct: string;
+  status: BudgetStatus;
+}
+
+export interface UpcomingPayment {
+  id: string;
+  name: string;
+  type: TransactionType;
+  amount: string;
+  currency: string;
+  due_on: string;
+}
+
+export interface Dashboard {
+  month: string;
+  date_from: string;
+  date_to: string;
+  is_current: boolean;
+  days_elapsed: number;
+  days_in_month: number;
+  currency: string;
+  income: string;
+  expense: string;
+  balance: string;
+  transaction_count: number;
+  previous_month: string;
+  previous_expense_same_point: string;
+  previous_expense_total: string;
+  expense_change_pct: string | null;
+  daily: string[];
+  previous_daily: string[];
+  categories: DashboardCategory[];
+  budgets: DashboardBudget[];
+  upcoming: UpcomingPayment[];
+  forecast: { low: string; typical: string; high: string } | null;
+}
+
 export interface ProposedItem {
   type: TransactionType;
   amount: string;

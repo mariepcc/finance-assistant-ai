@@ -14,11 +14,11 @@ import {
 } from 'react-native';
 
 import { colors, radius, spacing } from '@/components/theme';
+import { TransactionRow } from '@/components/TransactionRow';
 import { Centered, Chip, ErrorText } from '@/components/ui';
 import { useCategories, useTransactions } from '@/hooks/queries';
-import { categoryLabel } from '@/lib/categories';
-import { formatDayHeader, formatMoney, monthRange } from '@/lib/format';
-import type { Category, Transaction, TransactionFilters, TransactionType } from '@/lib/types';
+import { formatDayHeader, monthRange } from '@/lib/format';
+import type { Transaction, TransactionFilters, TransactionType } from '@/lib/types';
 
 type Period = 'this' | 'last' | 'all';
 
@@ -159,42 +159,6 @@ export default function TransactionsScreen() {
   );
 }
 
-function TransactionRow({ tx, byId }: { tx: Transaction; byId: Map<string, Category> }) {
-  const category = byId.get(tx.category_id);
-  const parent = category?.parent_id ? byId.get(category.parent_id) : undefined;
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.item, pressed && { opacity: 0.7 }]}
-      onPress={() => router.push({ pathname: '/transaction/[id]', params: { id: tx.id } })}
-    >
-      <View
-        style={[styles.dot, { backgroundColor: parent?.color ?? category?.color ?? colors.muted }]}
-      />
-      <View style={{ flex: 1 }}>
-        <View style={styles.titleRow}>
-          <Text style={styles.itemTitle}>{categoryLabel(category, byId)}</Text>
-          {tx.recurring_id ? (
-            <Ionicons
-              name="repeat"
-              size={14}
-              color={colors.muted}
-              accessibilityLabel="Stała płatność"
-            />
-          ) : null}
-        </View>
-        {tx.note ? (
-          <Text style={styles.itemNote} numberOfLines={1}>
-            {tx.note}
-          </Text>
-        ) : null}
-      </View>
-      <Text style={[styles.amount, { color: tx.type === 'expense' ? colors.expense : colors.income }]}>
-        {formatMoney(tx.amount, tx.currency, tx.type)}
-      </Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   filters: { paddingTop: spacing.sm, gap: spacing.sm, backgroundColor: colors.bg },
   search: {
@@ -218,21 +182,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'capitalize',
   },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.card,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  itemTitle: { fontSize: 16, color: colors.text },
-  itemNote: { fontSize: 13, color: colors.muted },
-  amount: { fontSize: 16, fontWeight: '600', fontVariant: ['tabular-nums'] },
   empty: { textAlign: 'center', color: colors.muted, marginTop: spacing.lg },
   fab: {
     position: 'absolute',
