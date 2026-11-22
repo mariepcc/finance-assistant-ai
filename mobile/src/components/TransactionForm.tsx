@@ -48,7 +48,11 @@ export function TransactionForm({ initial, submitLabel, submitting, serverError,
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={styles.container}
+      contentInsetAdjustmentBehavior="automatic"
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.row}>
         <Chip
           label="Wydatek"

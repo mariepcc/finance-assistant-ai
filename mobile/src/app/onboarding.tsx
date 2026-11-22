@@ -25,7 +25,7 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} contentInsetAdjustmentBehavior="automatic">
       <Text style={styles.title}>Zanim zaczniemy</Text>
       <Text style={styles.body}>
         Aplikacja przechowuje Twoje transakcje, kategorie i budżety, aby pokazywać podsumowania.

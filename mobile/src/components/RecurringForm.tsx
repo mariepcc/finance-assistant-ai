@@ -60,7 +60,11 @@ export function RecurringForm({ initial, submitLabel, submitting, serverError, o
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={styles.container}
+      contentInsetAdjustmentBehavior="automatic"
+      keyboardShouldPersistTaps="handled"
+    >
       {initial ? null : (
         <View style={styles.row}>
           <Chip

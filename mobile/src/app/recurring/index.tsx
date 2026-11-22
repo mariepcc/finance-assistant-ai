@@ -81,6 +81,7 @@ export default function RecurringScreen() {
           <RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />
         }
         contentContainerStyle={{ paddingBottom: 96 }}
+        contentInsetAdjustmentBehavior="automatic"
       />
       <Pressable
         accessibilityRole="button"
