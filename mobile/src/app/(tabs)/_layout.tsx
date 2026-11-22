@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
 import type { ComponentProps } from 'react';
-import type { ColorValue } from 'react-native';
+import { type ColorValue, Pressable } from 'react-native';
 
 import { colors } from '@/components/theme';
 
@@ -25,7 +25,21 @@ export default function TabsLayout() {
       <Tabs.Screen name="chat" options={{ title: 'Czat', tabBarIcon: icon('chatbubbles') }} />
       <Tabs.Screen
         name="transactions"
-        options={{ title: 'Transakcje', tabBarIcon: icon('list') }}
+        options={{
+          title: 'Transakcje',
+          tabBarIcon: icon('list'),
+          headerRight: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Stałe płatności"
+              hitSlop={8}
+              style={{ paddingHorizontal: 16 }}
+              onPress={() => router.push('/recurring')}
+            >
+              <Ionicons name="repeat" size={24} color={colors.primary} />
+            </Pressable>
+          ),
+        }}
       />
       <Tabs.Screen name="budgets" options={{ title: 'Budżety', tabBarIcon: icon('pie-chart') }} />
     </Tabs>

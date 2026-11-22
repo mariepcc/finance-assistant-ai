@@ -5,8 +5,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import ProposalKind, ProposalStatus, TransactionType
+from app.models.enums import ProposalKind, ProposalStatus, RecurringFrequency, TransactionType
 from app.schemas.common import Money, ORMModel
+from app.schemas.recurring import RecurringOut, Schedule
 from app.schemas.transaction import TransactionOut
 
 
@@ -43,6 +44,37 @@ class BudgetProposalPayload(BaseModel):
     original_amount: Decimal | None = None
 
 
+class ProposedRecurring(Schedule):
+    type: TransactionType = TransactionType.EXPENSE
+    amount: Money
+    category: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=100)
+
+
+class RecurringDraft(BaseModel):
+    type: TransactionType
+    amount: Money
+    currency: str
+    category_id: UUID
+    category: str
+    subcategory: str | None = None
+    name: str
+    frequency: RecurringFrequency
+    day_of_month: int
+    month: int | None
+    first_payment_on: date
+
+
+class RecurringProposalPayload(RecurringDraft):
+    original: RecurringDraft | None = None
+
+
+class EditedRecurring(Schedule):
+    amount: Money
+    category_id: UUID
+    name: str = Field(min_length=1, max_length=100)
+
+
 class EditedTransaction(BaseModel):
     type: TransactionType
     amount: Money
@@ -54,6 +86,7 @@ class EditedTransaction(BaseModel):
 class ConfirmIn(BaseModel):
     items: list[EditedTransaction] | None = Field(default=None, min_length=1, max_length=20)
     amount: Money | None = None
+    recurring: EditedRecurring | None = None
 
 
 class ProposalOut(ORMModel):
@@ -74,3 +107,4 @@ class ConfirmOut(BaseModel):
     proposal: ProposalOut
     transactions: list[TransactionOut] = []
     budget: BudgetOut | None = None
+    recurring: RecurringOut | None = None

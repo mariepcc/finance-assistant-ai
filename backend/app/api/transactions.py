@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
 
-from app.api.deps import SessionDep
+from app.api.deps import SessionDep, SyncRecurring
 from app.auth import CurrentUserDep
 from app.models import TransactionType
 from app.repositories import transactions as tx_repo
@@ -19,7 +19,7 @@ from app.services import transactions as tx_service
 router = APIRouter(prefix="/transactions", tags=["transakcje"])
 
 
-@router.get("", response_model=TransactionPage)
+@router.get("", response_model=TransactionPage, dependencies=[SyncRecurring])
 async def list_transactions(
     user: CurrentUserDep,
     session: SessionDep,

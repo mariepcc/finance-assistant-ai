@@ -3,7 +3,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated, Literal
 from uuid import UUID
 
-from app.models import TransactionType
+from app.models import RecurringFrequency, TransactionType
 from pydantic import BaseModel, PlainSerializer
 
 Amount = Annotated[Decimal, PlainSerializer(lambda v: f"{v:.2f}", return_type=str)]
@@ -176,3 +176,45 @@ class BudgetStatusResult(BaseModel):
     total_limit: Amount
     total_spent: Amount
     budgets: list[BudgetLine]
+
+
+class RecurringItem(BaseModel):
+    name: str
+    type: TransactionType
+    amount: Amount
+    currency: str
+    category: str
+    subcategory: str | None
+    frequency: RecurringFrequency
+    day_of_month: int
+    month: int | None
+    next_payment_on: date
+    active: bool
+    monthly_amount: Amount
+
+
+class RecurringListResult(BaseModel):
+    currency: str
+    active_count: int
+    paused_count: int
+    monthly_expense_total: Amount
+    monthly_income_total: Amount
+    payments: list[RecurringItem]
+
+
+class RecurringProposalResult(BaseModel):
+    proposal_id: UUID
+    status: Literal["pending"]
+    expires_at: datetime
+    name: str
+    type: TransactionType
+    amount: Amount
+    currency: str
+    category: str
+    subcategory: str | None
+    frequency: RecurringFrequency
+    day_of_month: int
+    month: int | None
+    first_payment_on: date
+    monthly_amount: Amount
+    requires_user_confirmation: bool = True

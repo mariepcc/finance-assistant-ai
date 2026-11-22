@@ -61,6 +61,12 @@ function RootNavigator() {
           options={{ title: 'Nowa transakcja', presentation: 'modal' }}
         />
         <Stack.Screen name="transaction/[id]" options={{ title: 'Transakcja' }} />
+        <Stack.Screen name="recurring/index" options={{ title: 'Stałe płatności' }} />
+        <Stack.Screen
+          name="recurring/new"
+          options={{ title: 'Nowa stała płatność', presentation: 'modal' }}
+        />
+        <Stack.Screen name="recurring/[id]" options={{ title: 'Stała płatność' }} />
       </Stack.Protected>
     </Stack>
   );

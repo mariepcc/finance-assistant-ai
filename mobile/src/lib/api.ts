@@ -5,6 +5,9 @@ import type {
   ConfirmResult,
   Profile,
   ProposalEdits,
+  RecurringInput,
+  RecurringList,
+  RecurringRule,
   Transaction,
   TransactionFilters,
   TransactionInput,
@@ -73,5 +76,12 @@ export const api = {
       method: 'POST',
       ...(edits ? { body: JSON.stringify(edits) } : {}),
     }),
+  recurringList: () => request<RecurringList>('/recurring'),
+  recurring: (id: string) => request<RecurringRule>(`/recurring/${id}`),
+  createRecurring: (input: RecurringInput) =>
+    request<RecurringRule>('/recurring', { method: 'POST', body: JSON.stringify(input) }),
+  updateRecurring: (id: string, input: Partial<RecurringInput> & { active?: boolean }) =>
+    request<RecurringRule>(`/recurring/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  deleteRecurring: (id: string) => request<void>(`/recurring/${id}`, { method: 'DELETE' }),
   rejectProposal: (id: string) => request<unknown>(`/proposals/${id}/reject`, { method: 'POST' }),
 };

@@ -33,6 +33,7 @@ class TransactionOut(ORMModel):
     occurred_on: date
     note: str | None
     source: TransactionSource
+    recurring_id: UUID | None = None
     created_at: datetime
 
 

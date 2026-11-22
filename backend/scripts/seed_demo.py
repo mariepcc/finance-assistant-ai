@@ -3,15 +3,24 @@ import asyncio
 import random
 from datetime import date, timedelta
 from decimal import Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_sessionmaker
-from app.models import Budget, Category, Transaction, TransactionType
+from app.models import (
+    Budget,
+    Category,
+    RecurringFrequency,
+    RecurringRule,
+    Transaction,
+    TransactionSource,
+    TransactionType,
+)
 from app.repositories import profiles as profiles_repo
 from app.services import onboarding
+from app.services.recurring import due_on_or_after
 
 MONTHS_BACK = 3
 SEED = 2026
@@ -80,15 +89,45 @@ def month_start(day: date, back: int) -> date:
     return date(year, month, 1)
 
 
-def build_transactions(
+def build_rules(
     user_id: UUID, categories: dict[str, UUID], today: date
+) -> dict[str, RecurringRule]:
+    rules = {}
+    for dom, category, fixed, kind, note in RECURRING:
+        assert note is not None
+        rules[note] = RecurringRule(
+            id=uuid4(),
+            user_id=user_id,
+            type=kind,
+            amount=Decimal(fixed),
+            currency="PLN",
+            category_id=categories[leaf_category(category, note)],
+            name=note,
+            frequency=RecurringFrequency.MONTHLY,
+            day_of_month=dom,
+            month=None,
+            next_due_on=due_on_or_after(
+                RecurringFrequency.MONTHLY, dom, None, today + timedelta(days=1)
+            ),
+            active=True,
+        )
+    return rules
+
+
+def build_transactions(
+    user_id: UUID, categories: dict[str, UUID], today: date, rules: dict[str, RecurringRule]
 ) -> list[Transaction]:
     rng = random.Random(SEED)
     start = month_start(today, MONTHS_BACK - 1)
     result: list[Transaction] = []
 
     def add(
-        day: date, category: str, amount: Decimal, kind: TransactionType, note: str | None
+        day: date,
+        category: str,
+        amount: Decimal,
+        kind: TransactionType,
+        note: str | None,
+        rule: RecurringRule | None = None,
     ) -> None:
         result.append(
             Transaction(
@@ -99,6 +138,8 @@ def build_transactions(
                 category_id=categories[leaf_category(category, note)],
                 occurred_on=day,
                 note=note,
+                source=TransactionSource.RECURRING if rule else TransactionSource.MANUAL,
+                recurring_id=rule.id if rule else None,
             )
         )
 
@@ -106,7 +147,7 @@ def build_transactions(
     while day <= today:
         for dom, category, fixed, kind, note in RECURRING:
             if day.day == dom:
-                add(day, category, Decimal(fixed), kind, note)
+                add(day, category, Decimal(fixed), kind, note, rules[note] if note else None)
         for category, notes, chance, low, high in RANDOM_SPENDING:
             if rng.random() < chance:
                 amount = Decimal(str(round(rng.uniform(low, high), 2)))
@@ -137,21 +178,30 @@ async def main(email: str, reset: bool) -> None:
             )
         await session.execute(delete(Transaction).where(Transaction.user_id == user_id))
         await session.execute(delete(Budget).where(Budget.user_id == user_id))
+        await session.execute(delete(RecurringRule).where(RecurringRule.user_id == user_id))
         rows = (await session.scalars(select(Category).where(Category.user_id == user_id))).all()
         categories = {c.name: c.id for c in rows}
-        transactions = build_transactions(user_id, categories, date.today())
+        rules = build_rules(user_id, categories, date.today())
+        session.add_all(rules.values())
+        await session.flush()
+        transactions = build_transactions(user_id, categories, date.today(), rules)
         session.add_all(transactions)
         session.add_all(
             Budget(user_id=user_id, category_id=categories[name], amount=Decimal(amount))
             for name, amount in BUDGETS.items()
         )
         await session.commit()
-    print(f"{email}: {len(transactions)} transakcji, {len(BUDGETS)} budżety.")
+    print(
+        f"{email}: {len(transactions)} transakcji, {len(BUDGETS)} budżety, "
+        f"{len(rules)} stałych płatności."
+    )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dane przykładowe dla konta testowego")
     parser.add_argument("--email", required=True)
-    parser.add_argument("--reset", action="store_true", help="usuń transakcje i budżety konta")
+    parser.add_argument(
+        "--reset", action="store_true", help="usuń transakcje, budżety i stałe płatności konta"
+    )
     args = parser.parse_args()
     asyncio.run(main(args.email, args.reset))

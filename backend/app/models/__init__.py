@@ -5,11 +5,13 @@ from app.models.enums import (
     BudgetPeriod,
     ProposalKind,
     ProposalStatus,
+    RecurringFrequency,
     TransactionSource,
     TransactionType,
 )
 from app.models.profile import Profile
 from app.models.proposal import Proposal
+from app.models.recurring import RecurringRule
 from app.models.transaction import Transaction
 
 __all__ = [
@@ -21,6 +23,8 @@ __all__ = [
     "Proposal",
     "ProposalKind",
     "ProposalStatus",
+    "RecurringFrequency",
+    "RecurringRule",
     "Transaction",
     "TransactionSource",
     "TransactionType",

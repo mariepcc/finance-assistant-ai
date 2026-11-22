@@ -30,6 +30,6 @@ async def test_valid_token_reaches_tools(server_url: str, make_user: MakeUser) -
         result = await client.call_tool(
             "get_summary", {"date_from": "2026-11-01", "date_to": "2026-11-30"}
         )
-    assert len(tools) == 9
+    assert len(tools) == 11
     assert result.structured_content is not None
     assert result.structured_content["expense"] == "42.00"

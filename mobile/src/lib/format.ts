@@ -1,4 +1,4 @@
-import type { TransactionType } from './types';
+import type { Frequency, TransactionType } from './types';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -58,4 +58,45 @@ export function formatDayHeader(iso: string): string {
     day: 'numeric',
     month: 'long',
   });
+}
+
+export const MONTHS = [
+  'stycznia',
+  'lutego',
+  'marca',
+  'kwietnia',
+  'maja',
+  'czerwca',
+  'lipca',
+  'sierpnia',
+  'września',
+  'października',
+  'listopada',
+  'grudnia',
+];
+
+export const MONTHS_SHORT = [
+  'sty',
+  'lut',
+  'mar',
+  'kwi',
+  'maj',
+  'cze',
+  'lip',
+  'sie',
+  'wrz',
+  'paź',
+  'lis',
+  'gru',
+];
+
+export function formatSchedule(frequency: Frequency, day: number, month: number | null): string {
+  if (frequency === 'yearly' && month) return `co rok, ${day} ${MONTHS[month - 1]}`;
+  return `co miesiąc, ${day}. dnia`;
+}
+
+export function formatDate(iso: string): string {
+  if (iso === today()) return 'dziś';
+  const [y, m, d] = iso.split('-').map(Number) as [number, number, number];
+  return `${d} ${MONTHS[m - 1]} ${y}`;
 }

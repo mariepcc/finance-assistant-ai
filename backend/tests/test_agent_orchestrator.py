@@ -7,7 +7,7 @@ from app.agent.router import RouteDecision
 from app.agent.types import ChatTurn, Event
 from app.agent.worker import NEED_OTHER_TOOLS
 from app.config import Settings
-from tests.fakes import TX_PROPOSAL, FakeGateway, FakeLLM, text_step, tool_step
+from tests.fakes import RECURRING_PROPOSAL, TX_PROPOSAL, FakeGateway, FakeLLM, text_step, tool_step
 
 TODAY = date(2026, 11, 9)
 SUMMARY_CALL = ("get_summary", {"date_from": "2026-10-01", "date_to": "2026-10-31"})
@@ -191,3 +191,33 @@ async def test_single_worker_gets_plain_message() -> None:
     llm = FakeLLM(routes=routes(["analysis"]), steps={"analysis": [text_step("ok")]})
     await collect(llm)
     assert llm.step_calls[0][1][0]["content"] == "Ile wydałam w październiku?"
+
+
+async def test_recurring_worker_proposes_with_own_tools() -> None:
+    llm = FakeLLM(
+        routes=routes(["recurring"]),
+        steps={
+            "recurring": [
+                tool_step(("propose_recurring", {"name": "Netflix", "amount": "43.00"})),
+                text_step(
+                    "Netflix za 43,00 zł co miesiąc, pierwsza płatność 2026-12-05. "
+                    "Potwierdź przyciskiem „Zapisz”."
+                ),
+            ]
+        },
+    )
+    gateway = FakeGateway()
+    events = await collect(llm, gateway, message="Netflix 43 zł co miesiąc 5.")
+    proposal = next(e for e in events if e.type == "proposal")
+    assert proposal.data == {"kind": "recurring", **RECURRING_PROPOSAL}
+    assert done(events)["verified"] is True
+    assert prompts.CATEGORY_STATUS["recurring"] in statuses(events)
+    _, messages = llm.step_calls[0]
+    assert gateway.calls == [("propose_recurring", {"name": "Netflix", "amount": "43.00"})]
+    assert messages[0]["content"] == "Netflix 43 zł co miesiąc 5."
+    assert llm.step_tools[0] == {
+        "list_recurring",
+        "propose_recurring",
+        "list_categories",
+        NEED_OTHER_TOOLS,
+    }

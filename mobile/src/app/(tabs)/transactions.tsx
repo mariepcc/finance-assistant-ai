@@ -171,7 +171,17 @@ function TransactionRow({ tx, byId }: { tx: Transaction; byId: Map<string, Categ
         style={[styles.dot, { backgroundColor: parent?.color ?? category?.color ?? colors.muted }]}
       />
       <View style={{ flex: 1 }}>
-        <Text style={styles.itemTitle}>{categoryLabel(category, byId)}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.itemTitle}>{categoryLabel(category, byId)}</Text>
+          {tx.recurring_id ? (
+            <Ionicons
+              name="repeat"
+              size={14}
+              color={colors.muted}
+              accessibilityLabel="Stała płatność"
+            />
+          ) : null}
+        </View>
         {tx.note ? (
           <Text style={styles.itemNote} numberOfLines={1}>
             {tx.note}
@@ -219,6 +229,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   dot: { width: 10, height: 10, borderRadius: 5 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   itemTitle: { fontSize: 16, color: colors.text },
   itemNote: { fontSize: 13, color: colors.muted },
   amount: { fontSize: 16, fontWeight: '600', fontVariant: ['tabular-nums'] },

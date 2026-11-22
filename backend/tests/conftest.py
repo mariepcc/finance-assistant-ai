@@ -26,7 +26,7 @@ TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+asyncpg://postgres:postgres@127.0.0.1:54322/finance_test"
 )
 JWT_SECRET = "test-secret-at-least-32-bytes-long!!"
-TABLES = "transactions, budgets, proposals, categories, profiles"
+TABLES = "transactions, recurring_rules, budgets, proposals, categories, profiles"
 
 
 @pytest.fixture(scope="session")

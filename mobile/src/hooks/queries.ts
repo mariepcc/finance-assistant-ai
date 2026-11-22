@@ -1,7 +1,12 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
-import type { TransactionFilters, TransactionInput, TransactionType } from '@/lib/types';
+import type {
+  RecurringInput,
+  TransactionFilters,
+  TransactionInput,
+  TransactionType,
+} from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
 
 export const keys = {
@@ -9,6 +14,8 @@ export const keys = {
   categories: (kind?: TransactionType) => ['categories', kind ?? 'all'] as const,
   transactions: (filters: TransactionFilters) => ['transactions', filters] as const,
   transaction: (id: string) => ['transaction', id] as const,
+  recurringList: ['recurring', 'list'] as const,
+  recurring: (id: string) => ['recurring', id] as const,
 };
 
 export function useMe() {
@@ -83,8 +90,46 @@ export function useDeleteTransaction() {
 }
 
 export function useConfirmProposal() {
-  const invalidate = useInvalidateTransactions();
+  const invalidate = useInvalidateRecurring();
   return useMutation({ mutationFn: api.confirmProposal, onSuccess: invalidate });
+}
+
+export function useRecurringList() {
+  return useQuery({ queryKey: keys.recurringList, queryFn: api.recurringList });
+}
+
+export function useRecurring(id: string) {
+  return useQuery({ queryKey: keys.recurring(id), queryFn: () => api.recurring(id) });
+}
+
+type RecurringPatch = Partial<RecurringInput> & { active?: boolean };
+
+function useInvalidateRecurring() {
+  const qc = useQueryClient();
+  return () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ['recurring'] }),
+      qc.invalidateQueries({ queryKey: ['transactions'] }),
+    ]);
+}
+
+export function useCreateRecurring() {
+  const invalidate = useInvalidateRecurring();
+  return useMutation({ mutationFn: api.createRecurring, onSuccess: invalidate });
+}
+
+export function useUpdateRecurring() {
+  const invalidate = useInvalidateRecurring();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: RecurringPatch }) =>
+      api.updateRecurring(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteRecurring() {
+  const invalidate = useInvalidateRecurring();
+  return useMutation({ mutationFn: api.deleteRecurring, onSuccess: invalidate });
 }
 
 export function useRejectProposal() {

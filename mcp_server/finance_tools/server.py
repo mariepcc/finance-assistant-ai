@@ -10,7 +10,7 @@ from starlette.responses import JSONResponse
 
 from finance_tools.auth import build_verifier
 from finance_tools.categories import TOOL_CATEGORIES
-from finance_tools.tools import analysis, budgets, categories, transactions
+from finance_tools.tools import analysis, budgets, categories, recurring, transactions
 
 INSTRUCTIONS = (
     "Narzędzia finansowe jednego użytkownika (tożsamość z tokena). "
@@ -70,6 +70,18 @@ TOOLS: list[ToolSpec] = [
         budgets.propose_budget,
         "Przygotowuje ustawienie lub zmianę miesięcznego limitu kategorii. NIE zapisuje: "
         "użytkownik potwierdza propozycję w aplikacji.",
+        read_only=False,
+    ),
+    ToolSpec(
+        recurring.list_recurring,
+        "Stałe płatności użytkownika (subskrypcje, rachunki, pensja): kwota, kategoria, "
+        "częstotliwość, następna płatność, status oraz miesięczne sumy aktywnych wydatków "
+        "i przychodów (płatności roczne przeliczone na miesiąc).",
+    ),
+    ToolSpec(
+        recurring.propose_recurring,
+        "Przygotowuje nową stałą płatność (miesięczną lub roczną), którą aplikacja będzie sama "
+        "zapisywać w dniu płatności. NIE zapisuje: użytkownik potwierdza propozycję w aplikacji.",
         read_only=False,
     ),
 ]

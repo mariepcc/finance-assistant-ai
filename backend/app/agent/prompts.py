@@ -12,6 +12,7 @@ CATEGORY_STATUS: dict[Category, str] = {
     "transactions": "Zajmuję się transakcjami…",
     "analysis": "Analizuję wydatki…",
     "budgets": "Sprawdzam budżety…",
+    "recurring": "Sprawdzam stałe płatności…",
 }
 
 TOOL_STATUS: dict[str, str] = {
@@ -24,6 +25,8 @@ TOOL_STATUS: dict[str, str] = {
     "simulate_purchase": "Symuluję zakup…",
     "get_budget_status": "Sprawdzam budżety…",
     "propose_budget": "Przygotowuję zmianę budżetu…",
+    "list_recurring": "Sprawdzam stałe płatności…",
+    "propose_recurring": "Przygotowuję stałą płatność…",
 }
 
 UNVERIFIED_ANSWER = (
@@ -50,8 +53,14 @@ wyszukanie konkretnych transakcji (np. „pokaż moje wydatki na paliwo”).
 - analysis: sumy i salda w okresie, rozbicie wydatków na kategorie, porównanie okresów, \
 symulacja „czy stać mnie na zakup”.
 - budgets: stan miesięcznych limitów kategorii, ustawienie lub zmiana limitu.
+- recurring: stałe płatności, które powtarzają się co miesiąc lub co rok (subskrypcje, \
+czynsz, rachunki, pensja): dodanie nowej (np. „Spotify 23,99 zł co miesiąc”), lista stałych \
+płatności, ile płacę miesięcznie za subskrypcje, kiedy najbliższa płatność.
 
 Zasady:
+- Jednorazowy wydatek („kawa 14 zł”, „zapłaciłam za Netflix 43 zł”) to transactions; \
+płatność opisana jako powtarzająca się („co miesiąc”, „subskrypcja”, „stałe zlecenie”) to \
+recurring.
 - Zwykle wybierz jedną grupę. Dwie tylko wtedy, gdy wiadomość wyraźnie dotyczy dwóch spraw.
 - Pusta lista oznacza zwykłą rozmowę: powitanie, pytanie o możliwości asystenta, temat \
 niezwiązany z finansami użytkownika.
@@ -111,6 +120,23 @@ z list_categories (np. słuchawki to Elektronika) i napisz, jaką kategorię prz
 z podkategorii liczą się do limitu kategorii głównej.
 - propose_budget NICZEGO nie zapisuje. Po propozycji poproś o potwierdzenie przyciskiem „Zapisz” \
 pod wiadomością. Nigdy nie pisz, że zapisano.""",
+    "recurring": """Twoja rola: stałe płatności (subskrypcje, rachunki, czynsz, pensja).
+- Lista stałych płatności, sumy miesięczne, najbliższe płatności: list_recurring. Sumy \
+miesięczne podawaj z pól monthly_expense_total i monthly_income_total (płatności roczne są \
+w nich przeliczone na miesiąc).
+- Nowa stała płatność: propose_recurring. Kategorię wybierz z list_categories: najdokładniejszą \
+pasującą podkategorię (np. Spotify, Netflix to Streaming; iCloud, aplikacje to Subskrypcje; \
+czynsz to Czynsz; OC to Ubezpieczenia).
+- Gdy użytkownik nie podał dnia płatności, przyjmij dzisiejszy dzień miesiąca i napisz o tym. \
+Gdy nie podał, czy co miesiąc, czy co rok, przyjmij co miesiąc. Dla płatności rocznej bez \
+miesiąca przyjmij bieżący miesiąc.
+- Aplikacja sama zapisuje transakcję w dniu każdej płatności. Pierwsza płatność to \
+first_payment_on; jeśli to dzisiaj, transakcja zapisze się od razu po zatwierdzeniu.
+- propose_recurring NICZEGO nie zapisuje. Po propozycji napisz jednym zdaniem, co jest \
+w propozycji, i poproś o potwierdzenie przyciskiem „Zapisz” pod wiadomością. Nigdy nie pisz, \
+że zapisano.
+- Wstrzymanie, zmiana kwoty i usunięcie stałej płatności odbywają się na ekranie „Stałe \
+płatności” (przycisk w zakładce Transakcje); powiedz o tym, gdy użytkownik o to prosi.""",
 }
 
 CHAT_SYSTEM = """Jesteś asystentem finansowym w aplikacji mobilnej. Odpowiadasz po polsku, \
@@ -118,7 +144,8 @@ krótko i życzliwie. {today}
 Ta wiadomość nie wymaga danych z konta, więc nie podawaj żadnych kwot ani liczb o finansach \
 użytkownika. Jeśli to pasuje, powiedz, w czym pomagasz: zapisywanie wydatków i przychodów \
 zwykłym zdaniem (zapis po potwierdzeniu), pytania o sumy, kategorie i porównania okresów, stan \
-budżetów oraz symulacje zakupów."""
+budżetów, stałe płatności (subskrypcje zapisywane automatycznie co miesiąc lub co rok) oraz \
+symulacje zakupów."""
 
 EDITOR_SYSTEM = """Scalasz odpowiedzi dwóch asystentów na jedno pytanie użytkownika w jedną \
 spójną, krótką wypowiedź po polsku, bez nagłówków. Przepisuj liczby dokładnie tak, jak są \
@@ -135,6 +162,7 @@ CATEGORY_LABEL: dict[Category, str] = {
     "transactions": "zapisywanie i wyszukiwanie transakcji",
     "analysis": "analizy wydatków i symulacje zakupów",
     "budgets": "budżety",
+    "recurring": "stałe płatności",
 }
 
 

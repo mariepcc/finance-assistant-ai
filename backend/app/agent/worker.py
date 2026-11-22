@@ -23,7 +23,11 @@ NEED_OTHER_TOOLS_DEF: dict[str, Any] = {
         "additionalProperties": False,
     },
 }
-PROPOSAL_KINDS = {"propose_transaction": "transaction", "propose_budget": "budget"}
+PROPOSAL_KINDS = {
+    "propose_transaction": "transaction",
+    "propose_budget": "budget",
+    "propose_recurring": "recurring",
+}
 
 OnEvent = Callable[[Event], Awaitable[None]]
 

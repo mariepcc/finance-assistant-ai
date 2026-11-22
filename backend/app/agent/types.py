@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-Category = Literal["transactions", "analysis", "budgets"]
-ROUTABLE: tuple[Category, ...] = ("transactions", "analysis", "budgets")
+Category = Literal["transactions", "analysis", "budgets", "recurring"]
+ROUTABLE: tuple[Category, ...] = ("transactions", "analysis", "budgets", "recurring")
 SHARED_CATEGORY = "categories"
 
 EventType = Literal["status", "proposal", "token", "done", "error"]

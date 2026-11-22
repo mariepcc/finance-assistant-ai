@@ -27,7 +27,8 @@ export interface Transaction {
   category_id: string;
   occurred_on: string;
   note: string | null;
-  source: 'manual' | 'assistant';
+  source: 'manual' | 'assistant' | 'recurring';
+  recurring_id: string | null;
   created_at: string;
 }
 
@@ -50,6 +51,39 @@ export interface TransactionFilters {
   type?: TransactionType;
   category_id?: string;
   q?: string;
+}
+
+export type Frequency = 'monthly' | 'yearly';
+
+export interface RecurringRule {
+  id: string;
+  type: TransactionType;
+  amount: string;
+  currency: string;
+  category_id: string;
+  name: string;
+  frequency: Frequency;
+  day_of_month: number;
+  month: number | null;
+  next_due_on: string;
+  active: boolean;
+  monthly_amount: string;
+}
+
+export interface RecurringList {
+  items: RecurringRule[];
+  monthly_expense: string;
+  monthly_income: string;
+}
+
+export interface RecurringInput {
+  type: TransactionType;
+  amount: string;
+  category_id: string;
+  name: string;
+  frequency: Frequency;
+  day_of_month: number;
+  month: number | null;
 }
 
 export interface ProposedItem {
@@ -77,9 +111,28 @@ export type Proposal =
       currency: string;
       amount: string;
       previous_amount: string | null;
+    }
+  | {
+      kind: 'recurring';
+      proposal_id: string;
+      expires_at: string;
+      name: string;
+      type: TransactionType;
+      amount: string;
+      currency: string;
+      category: string;
+      subcategory: string | null;
+      frequency: Frequency;
+      day_of_month: number;
+      month: number | null;
+      first_payment_on: string;
+      monthly_amount: string;
     };
 
-export type ProposalEdits = { items: TransactionInput[] } | { amount: string };
+export type ProposalEdits =
+  | { items: TransactionInput[] }
+  | { amount: string }
+  | { recurring: Omit<RecurringInput, 'type'> };
 
 export interface ConfirmResult {
   transactions: Transaction[];

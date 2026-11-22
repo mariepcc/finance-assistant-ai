@@ -16,6 +16,7 @@ class Transaction(UUIDPk, Timestamps, Base):
         CheckConstraint("amount > 0", name="amount_positive"),
         Index("ix_transactions_user_date", "user_id", "occurred_on"),
         Index("ix_transactions_user_category_date", "user_id", "category_id", "occurred_on"),
+        Index("uq_transactions_recurring_date", "recurring_id", "occurred_on", unique=True),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -34,4 +35,7 @@ class Transaction(UUIDPk, Timestamps, Base):
     )
     proposal_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("proposals.id", ondelete="SET NULL")
+    )
+    recurring_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("recurring_rules.id", ondelete="SET NULL")
     )

@@ -20,6 +20,8 @@ TOOL_CATEGORIES = {
     "simulate_purchase": "analysis",
     "get_budget_status": "budgets",
     "propose_budget": "budgets",
+    "list_recurring": "recurring",
+    "propose_recurring": "recurring",
 }
 
 SUMMARY = {
@@ -51,6 +53,23 @@ TX_PROPOSAL = {
             "note": "kawa",
         }
     ],
+    "requires_user_confirmation": True,
+}
+RECURRING_PROPOSAL = {
+    "proposal_id": "0b8d7c55-58f4-4d3f-9f50-2d3c4f0e8a11",
+    "status": "pending",
+    "expires_at": "2026-11-22T16:07:38Z",
+    "name": "Netflix",
+    "type": "expense",
+    "amount": "43.00",
+    "currency": "PLN",
+    "category": "Rozrywka",
+    "subcategory": "Streaming",
+    "frequency": "monthly",
+    "day_of_month": 5,
+    "month": None,
+    "first_payment_on": "2026-12-05",
+    "monthly_amount": "43.00",
     "requires_user_confirmation": True,
 }
 
@@ -92,6 +111,7 @@ class FakeLLM:
     parse_calls: list[str] = field(default_factory=list)
     step_calls: list[tuple[Category, list[Message]]] = field(default_factory=list)
     complete_calls: list[tuple[str, str]] = field(default_factory=list)
+    step_tools: list[set[str]] = field(default_factory=list)
 
     async def parse[T: BaseModel](
         self, *, model: str, system: str, messages: list[Message], output: type[T], effort: str
@@ -113,6 +133,7 @@ class FakeLLM:
             await asyncio.sleep(self.step_delay)
         category = category_of(system)
         self.step_calls.append((category, [dict(m) for m in messages]))
+        self.step_tools.append({t["name"] for t in tools})
         script = self.steps[category]
         if not script:
             raise AssertionError(f"brak kolejnego kroku dla {category}")
@@ -146,6 +167,7 @@ def default_handlers() -> dict[str, Handler]:
         "get_summary": lambda _: ToolOutcome(SUMMARY, False),
         "get_budget_status": lambda _: ToolOutcome(BUDGETS, False),
         "propose_transaction": lambda _: ToolOutcome(TX_PROPOSAL, False),
+        "propose_recurring": lambda _: ToolOutcome(RECURRING_PROPOSAL, False),
     }
 
 

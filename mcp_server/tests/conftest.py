@@ -34,7 +34,7 @@ TEST_DATABASE_URL = os.environ.get(
     "postgresql+asyncpg://postgres:postgres@127.0.0.1:54322/finance_mcp_test",
 )
 BACKEND_DIR = Path(__file__).resolve().parents[2] / "backend"
-TABLES = "transactions, budgets, proposals, categories, profiles"
+TABLES = "transactions, recurring_rules, budgets, proposals, categories, profiles"
 JWT_SECRET = "mcp-test-secret-at-least-32-bytes!!"
 JWT_ISSUER = "http://127.0.0.1:54321/auth/v1"
 

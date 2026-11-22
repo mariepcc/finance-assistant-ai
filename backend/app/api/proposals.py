@@ -6,6 +6,7 @@ from app.api.deps import SessionDep
 from app.auth import CurrentUserDep
 from app.errors import GoneError
 from app.schemas.proposal import BudgetOut, ConfirmIn, ConfirmOut, ProposalOut
+from app.schemas.recurring import RecurringOut
 from app.schemas.transaction import TransactionOut
 from app.services import proposals as proposals_service
 
@@ -29,6 +30,7 @@ async def confirm_proposal(
         proposal=ProposalOut.model_validate(result.proposal),
         transactions=[TransactionOut.model_validate(t) for t in result.transactions],
         budget=BudgetOut.model_validate(result.budget) if result.budget else None,
+        recurring=RecurringOut.model_validate(result.recurring) if result.recurring else None,
     )
 
 

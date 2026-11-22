@@ -10,6 +10,7 @@ from app.errors import DomainError
 from app.models import Category, TransactionType
 from app.repositories import categories as categories_repo
 from app.repositories import profiles as profiles_repo
+from app.services import recurring as recurring_service
 from fastmcp.exceptions import ToolError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +31,7 @@ async def tool_context() -> AsyncIterator[ToolContext]:
     async with get_sessionmaker()() as session:
         try:
             profile = await profiles_repo.get_or_create(session, user_id)
+            await recurring_service.materialize_due(session, user_id, date.today())
             yield ToolContext(session=session, user_id=user_id, currency=profile.default_currency)
             await session.commit()
         except DomainError as exc:

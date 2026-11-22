@@ -7,17 +7,27 @@ import { ApiError } from '@/lib/api';
 import { joinLabel } from '@/lib/categories';
 import {
   daysAgo,
+  formatDate,
   formatDayHeader,
   formatMoney,
+  formatSchedule,
   isValidIsoDate,
   normalizeAmount,
   today,
 } from '@/lib/format';
+import { firstDue, parseDay } from '@/lib/recurring';
 import type { Proposal, ProposalEdits, ProposedItem, TransactionType } from '@/lib/types';
 
 import { CategoryPicker } from './CategoryPicker';
+import { type Schedule, ScheduleFields } from './ScheduleFields';
 import { colors, radius, spacing } from './theme';
 import { Button, Chip, ErrorText, Field } from './ui';
+
+const TITLE: Record<Proposal['kind'], string> = {
+  transaction: 'Do zapisania',
+  budget: 'Zmiana budżetu',
+  recurring: 'Stała płatność',
+};
 
 const STATE_LABEL: Record<Exclude<ProposalState, 'pending'>, string> = {
   saved: 'Zapisano',
@@ -37,6 +47,19 @@ interface ItemDraft {
 }
 
 type ItemErrors = Partial<Record<'amount' | 'category' | 'date', string>>;
+
+type RecurringProposal = Extract<Proposal, { kind: 'recurring' }>;
+
+interface RecurringDraft {
+  name: string;
+  amount: string;
+  categoryId: string | null;
+  category: string;
+  subcategory: string | null;
+  schedule: Schedule;
+}
+
+type RecurringErrors = Partial<Record<'name' | 'amount' | 'category' | 'day' | 'month', string>>;
 
 function stateFromError(err: unknown): ProposalState | null {
   if (err instanceof ApiError && err.status === 410) return 'expired';
@@ -150,6 +173,116 @@ function ItemEditor({
   );
 }
 
+function toRecurringDraft(p: RecurringProposal): RecurringDraft {
+  return {
+    name: p.name,
+    amount: p.amount.replace('.', ','),
+    categoryId: null,
+    category: p.category,
+    subcategory: p.subcategory,
+    schedule: { frequency: p.frequency, day: String(p.day_of_month), month: p.month },
+  };
+}
+
+function RecurringEditor({
+  kind,
+  draft,
+  errors,
+  onChange,
+}: {
+  kind: TransactionType;
+  draft: RecurringDraft;
+  errors: RecurringErrors;
+  onChange: (next: RecurringDraft) => void;
+}) {
+  const categories = useCategories(kind);
+  const set = (patch: Partial<RecurringDraft>) => onChange({ ...draft, ...patch });
+
+  useEffect(() => {
+    if (draft.categoryId || !categories.data) return;
+    const name = draft.subcategory ?? draft.category;
+    const match = categories.data.find((c) => c.name === name);
+    if (match) onChange({ ...draft, categoryId: match.id });
+  }, [categories.data, draft, onChange]);
+
+  return (
+    <View style={styles.editor}>
+      <Field
+        label="Nazwa"
+        value={draft.name}
+        onChangeText={(name) => set({ name })}
+        maxLength={100}
+        error={errors.name}
+      />
+      <Field
+        label="Kwota"
+        value={draft.amount}
+        onChangeText={(amount) => set({ amount })}
+        keyboardType="decimal-pad"
+        error={errors.amount}
+      />
+      <Text style={styles.label}>Kategoria</Text>
+      <CategoryPicker
+        kind={kind}
+        value={draft.categoryId}
+        onChange={(picked) =>
+          set({ categoryId: picked.id, category: picked.category, subcategory: picked.subcategory })
+        }
+        error={errors.category}
+      />
+      <ScheduleFields
+        value={draft.schedule}
+        onChange={(schedule) => set({ schedule })}
+        dayError={errors.day}
+        monthError={errors.month}
+      />
+    </View>
+  );
+}
+
+function validateRecurring(
+  p: RecurringProposal,
+  d: RecurringDraft,
+): { errors: RecurringErrors; edits?: ProposalEdits; updated?: Proposal } {
+  const errors: RecurringErrors = {};
+  const amount = normalizeAmount(d.amount);
+  const day = parseDay(d.schedule.day);
+  const month = d.schedule.frequency === 'yearly' ? d.schedule.month : null;
+  if (!d.name.trim()) errors.name = 'Podaj nazwę, np. Spotify';
+  if (!amount) errors.amount = 'Podaj kwotę większą od zera, np. 23,99';
+  if (!d.categoryId) errors.category = 'Wybierz kategorię';
+  if (!day) errors.day = 'Dzień od 1 do 31';
+  if (d.schedule.frequency === 'yearly' && !month) errors.month = 'Wybierz miesiąc';
+  if (!amount || !day || !d.categoryId || Object.keys(errors).length > 0) return { errors };
+  const fields = {
+    name: d.name.trim(),
+    amount,
+    category_id: d.categoryId,
+    frequency: d.schedule.frequency,
+    day_of_month: day,
+    month,
+  };
+  return {
+    errors,
+    edits: { recurring: fields },
+    updated: {
+      ...p,
+      name: fields.name,
+      amount,
+      category: d.category,
+      subcategory: d.subcategory,
+      frequency: fields.frequency,
+      day_of_month: day,
+      month,
+      first_payment_on: firstDue(fields.frequency, day, month),
+      monthly_amount:
+        fields.frequency === 'yearly'
+          ? (Math.round((Number(amount) * 100) / 12) / 100).toFixed(2)
+          : amount,
+    },
+  };
+}
+
 function validateItems(drafts: ItemDraft[]): { errors: ItemErrors[]; edits?: ProposalEdits } {
   const errors = drafts.map((d) => {
     const e: ItemErrors = {};
@@ -189,6 +322,8 @@ export function ProposalCard({
   const [itemErrors, setItemErrors] = useState<ItemErrors[]>([]);
   const [budgetAmount, setBudgetAmount] = useState('');
   const [budgetError, setBudgetError] = useState<string>();
+  const [recurring, setRecurring] = useState<RecurringDraft | null>(null);
+  const [recurringErrors, setRecurringErrors] = useState<RecurringErrors>({});
   const busy = confirm.isPending || reject.isPending;
   const failure = confirm.error ?? reject.error;
   const failureText = failure && !stateFromError(failure) ? failure.message : null;
@@ -203,6 +338,9 @@ export function ProposalCard({
     if (proposal.kind === 'transaction') {
       setDrafts(proposal.items.map(toDraft));
       setItemErrors([]);
+    } else if (proposal.kind === 'recurring') {
+      setRecurring(toRecurringDraft(proposal));
+      setRecurringErrors({});
     } else {
       setBudgetAmount(proposal.amount.replace('.', ','));
       setBudgetError(undefined);
@@ -237,6 +375,13 @@ export function ProposalCard({
           note: item.note,
         })),
       };
+    } else if (proposal.kind === 'recurring') {
+      if (!recurring) return;
+      const result = validateRecurring(proposal, recurring);
+      setRecurringErrors(result.errors);
+      if (!result.edits || !result.updated) return;
+      edits = result.edits;
+      updated = result.updated;
     } else {
       const amount = normalizeAmount(budgetAmount);
       setBudgetError(amount ? undefined : 'Podaj kwotę większą od zera, np. 500');
@@ -278,7 +423,7 @@ export function ProposalCard({
   return (
     <View style={styles.card}>
       <Text style={styles.title}>
-        {proposal.kind === 'transaction' ? 'Do zapisania' : 'Zmiana budżetu'}
+        {TITLE[proposal.kind]}
       </Text>
       {pending && editing ? (
         proposal.kind === 'transaction' ? (
@@ -291,6 +436,15 @@ export function ProposalCard({
               onRemove={drafts.length > 1 ? () => removeDraft(i) : undefined}
             />
           ))
+        ) : proposal.kind === 'recurring' ? (
+          recurring ? (
+            <RecurringEditor
+              kind={proposal.type}
+              draft={recurring}
+              errors={recurringErrors}
+              onChange={setRecurring}
+            />
+          ) : null
         ) : (
           <View style={styles.editor}>
             <Text style={styles.primary}>{proposal.category}</Text>
@@ -324,6 +478,8 @@ export function ProposalCard({
             </Text>
           </View>
         ))
+      ) : proposal.kind === 'recurring' ? (
+        <RecurringSummary proposal={proposal} saved={state === 'saved'} />
       ) : (
         <View style={styles.row}>
           <Text style={[styles.primary, { flex: 1 }]}>{proposal.category}</Text>
@@ -362,6 +518,43 @@ export function ProposalCard({
         </Text>
       )}
       <ErrorText>{failureText}</ErrorText>
+    </View>
+  );
+}
+
+function RecurringSummary({ proposal, saved }: { proposal: RecurringProposal; saved: boolean }) {
+  const first = proposal.first_payment_on;
+  const firstText =
+    first === today()
+      ? saved
+        ? 'Pierwsza płatność: dziś, już zapisana'
+        : 'Pierwsza płatność: dziś, zapisze się od razu'
+      : `Pierwsza płatność: ${formatDate(first)}`;
+  return (
+    <View style={styles.row}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.primary}>{proposal.name}</Text>
+        <Text style={styles.secondary}>
+          {joinLabel(proposal.category, proposal.subcategory)} ·{' '}
+          {formatSchedule(proposal.frequency, proposal.day_of_month, proposal.month)}
+        </Text>
+        <Text style={styles.secondary}>{firstText}</Text>
+      </View>
+      <View style={{ alignItems: 'flex-end' }}>
+        <Text
+          style={[
+            styles.amount,
+            { color: proposal.type === 'expense' ? colors.expense : colors.income },
+          ]}
+        >
+          {formatMoney(proposal.amount, proposal.currency, proposal.type)}
+        </Text>
+        {proposal.frequency === 'yearly' ? (
+          <Text style={styles.secondary}>
+            ≈ {formatMoney(proposal.monthly_amount, proposal.currency)} / mies.
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }
