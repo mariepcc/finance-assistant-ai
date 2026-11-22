@@ -28,7 +28,7 @@ DEFAULT_CATEGORIES: list[DefaultCategory] = [
         "Jedzenie",
         EXPENSE,
         "restaurant",
-        "#F97316",
+        "#EB6834",
         None,
         (
             ("Spożywcze", "sklepy spożywcze, także zakupy spożywcze online"),
@@ -41,7 +41,7 @@ DEFAULT_CATEGORIES: list[DefaultCategory] = [
         "Transport",
         EXPENSE,
         "bus",
-        "#3B82F6",
+        "#2A78D6",
         "codzienne przemieszczanie się: dojazdy, komunikacja miejska, paliwo, taksówki",
         (
             ("Komunikacja miejska", "bilety i karty miejskie, regularne dojazdy pociągiem"),
@@ -53,7 +53,7 @@ DEFAULT_CATEGORIES: list[DefaultCategory] = [
         "Podróże",
         EXPENSE,
         "airplane",
-        "#0EA5E9",
+        "#1BAF7A",
         "wyjazdy poza miasto: przejazdy, noclegi, atrakcje",
         (
             ("Przejazdy", "pociąg, autobus lub samolot na wyjazd do innego miasta"),
@@ -65,7 +65,7 @@ DEFAULT_CATEGORIES: list[DefaultCategory] = [
         "Mieszkanie",
         EXPENSE,
         "home",
-        "#8B5CF6",
+        "#6250D6",
         None,
         (
             ("Czynsz", "czynsz, najem"),
@@ -77,7 +77,7 @@ DEFAULT_CATEGORIES: list[DefaultCategory] = [
         "Rachunki",
         EXPENSE,
         "receipt",
-        "#64748B",
+        "#EDA100",
         None,
         (
             ("Prąd i gaz", None),
@@ -91,7 +91,7 @@ DEFAULT_CATEGORIES: list[DefaultCategory] = [
         "Zdrowie",
         EXPENSE,
         "medkit",
-        "#EF4444",
+        "#E34948",
         None,
         (
             ("Apteka", "leki, suplementy"),
@@ -103,7 +103,7 @@ DEFAULT_CATEGORIES: list[DefaultCategory] = [
         "Rozrywka",
         EXPENSE,
         "game-controller",
-        "#EC4899",
+        "#E87BA4",
         None,
         (
             ("Kino", None),
@@ -118,7 +118,7 @@ DEFAULT_CATEGORIES: list[DefaultCategory] = [
         "Zakupy",
         EXPENSE,
         "bag-handle",
-        "#14B8A6",
+        "#008300",
         None,
         (
             ("Ubrania", "ubrania, obuwie, dodatki"),

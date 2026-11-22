@@ -15,7 +15,7 @@ import { AskAssistant } from '@/components/dashboard/AskAssistant';
 import { BalanceCard } from '@/components/dashboard/BalanceCard';
 import { BudgetMeters } from '@/components/dashboard/BudgetMeters';
 import { Card } from '@/components/dashboard/Card';
-import { CategoryBars } from '@/components/dashboard/CategoryBars';
+import { CategoryDonut } from '@/components/dashboard/CategoryDonut';
 import { SpendingPaceChart } from '@/components/dashboard/SpendingPaceChart';
 import { UpcomingPayments } from '@/components/dashboard/UpcomingPayments';
 import { colors, spacing } from '@/components/theme';
@@ -115,7 +115,12 @@ export default function DashboardScreen() {
                   <SpendingPaceChart data={data} />
                 </Card>
                 <Card title="Na co wydajesz">
-                  <CategoryBars categories={data.categories} currency={data.currency} />
+                  <CategoryDonut
+                    key={data.month}
+                    categories={data.categories}
+                    total={data.expense}
+                    currency={data.currency}
+                  />
                 </Card>
               </>
             )}
