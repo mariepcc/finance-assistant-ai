@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { type ComponentProps, useState } from 'react';
+import { type ComponentProps, memo, useState } from 'react';
 import {
   ActivityIndicator,
+  type LayoutChangeEvent,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,6 +11,8 @@ import {
   Text,
   View,
 } from 'react-native';
+
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { BudgetRing } from '@/components/BudgetRing';
 import { colors, radius, spacing, status } from '@/components/theme';
@@ -45,10 +48,37 @@ function paceOf(item: BudgetItem, expected: number | null): Pace {
   return Number(item.used_pct) > expected + AHEAD_MARGIN ? 'ahead' : 'ok';
 }
 
+const INK = colors.text;
+const INK_SOFT = '#5B6478';
+
+const Backdrop = memo(function Backdrop({ width, height }: { width: number; height: number }) {
+  if (width === 0 || height === 0) return null;
+  return (
+    <Svg style={styles.backdrop} width={width} height={height}>
+      <Defs>
+        <LinearGradient
+          id="soft"
+          x1="0"
+          y1="0"
+          x2={width}
+          y2={height}
+          gradientUnits="userSpaceOnUse"
+        >
+          <Stop offset="0" stopColor="#E6E9FF" />
+          <Stop offset="0.55" stopColor="#F1ECFF" />
+          <Stop offset="1" stopColor="#FFEFE6" />
+        </LinearGradient>
+      </Defs>
+      <Rect x={0} y={0} width={width} height={height} fill="url(#soft)" />
+    </Svg>
+  );
+});
+
 function Summary({ data }: { data: BudgetsOverview }) {
+  const [size, setSize] = useState({ width: 0, height: 0 });
   const limit = Number(data.total_limit);
   const spent = Number(data.total_spent);
-  const used = limit > 0 ? (spent / limit) * 100 : 0;
+  const scale = Math.max(limit, spent, 1);
   const expected = expectedPct(data);
   const remaining = limit - spent;
   const daysLeft = data.days_in_month - data.days_elapsed + 1;
@@ -59,23 +89,67 @@ function Summary({ data }: { data: BudgetsOverview }) {
     else if (pace === 'ok') counts.ok += 1;
     else counts.warn += 1;
   }
-  const fill = used > 100 ? status.exceeded : colors.primaryText;
+  const within = Math.min(spent, limit) / scale;
+  const over = Math.max(spent - limit, 0) / scale;
+  const paceAmount = expected !== null ? (limit * Math.min(expected, 100)) / 100 : null;
+  const paceLeft = paceAmount !== null ? paceAmount / scale : null;
+  const exceeded = spent > limit;
+
+  const onLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    if (width !== size.width || height !== size.height) setSize({ width, height });
+  };
 
   return (
-    <View style={styles.summary}>
-      <Text style={styles.summaryLabel}>Wszystkie budżety</Text>
-      <Text style={styles.summaryValue}>
-        {formatMoney(data.total_spent, data.currency)}
-        <Text style={styles.summaryOf}> z {formatMoney(data.total_limit, data.currency)}</Text>
+    <View style={styles.summary} onLayout={onLayout}>
+      <Backdrop width={size.width} height={size.height} />
+      <Text style={styles.summaryLabel}>
+        {monthTitle(data.month)} · {data.items.length}{' '}
+        {data.items.length === 1 ? 'budżet' : data.items.length < 5 ? 'budżety' : 'budżetów'}
       </Text>
+      <Text style={styles.summaryValue}>{formatMoney(data.total_spent, data.currency)}</Text>
+      <Text style={styles.summaryOf}>
+        wydano z {formatMoney(data.total_limit, data.currency)} łącznego limitu
+      </Text>
+
       <View style={styles.bigTrack}>
-        <View
-          style={[styles.bigFill, { width: `${Math.min(used, 100)}%`, backgroundColor: fill }]}
-        />
-        {expected !== null ? (
-          <View style={[styles.paceDot, { left: `${Math.min(expected, 100)}%` }]} />
+        <View style={[styles.within, { width: `${within * 100}%` }]} />
+        {over > 0 ? <View style={[styles.over, { width: `${over * 100}%` }]} /> : null}
+        {exceeded ? (
+          <View style={[styles.limitMark, { left: `${(limit / scale) * 100}%` }]} />
+        ) : null}
+        {paceLeft !== null ? (
+          <View style={[styles.paceMark, { left: `${paceLeft * 100}%` }]} />
         ) : null}
       </View>
+
+      <View style={styles.markLegend}>
+        <View style={styles.markItem}>
+          <View style={[styles.swatchBar, { backgroundColor: colors.primary }]} />
+          <Text style={styles.markText}>wydano</Text>
+        </View>
+        {exceeded ? (
+          <View style={styles.markItem}>
+            <View style={[styles.swatchBar, { backgroundColor: status.exceeded }]} />
+            <Text style={styles.markText}>ponad limit</Text>
+          </View>
+        ) : null}
+        {exceeded ? (
+          <View style={styles.markItem}>
+            <View style={styles.swatchLimit} />
+            <Text style={styles.markText}>koniec limitu</Text>
+          </View>
+        ) : null}
+        {paceAmount !== null ? (
+          <View style={styles.markItem}>
+            <View style={styles.swatchPace} />
+            <Text style={styles.markText}>
+              równe tempo na dziś: {formatMoney(paceAmount.toFixed(2), data.currency)}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
       <Text style={styles.summaryDetail}>
         {remaining >= 0
           ? `Zostało ${formatMoney(remaining.toFixed(2), data.currency)}`
@@ -86,15 +160,15 @@ function Summary({ data }: { data: BudgetsOverview }) {
       </Text>
       <View style={styles.counts}>
         <View style={styles.count}>
-          <Ionicons name="checkmark-circle" size={15} color="#A7F3D0" />
+          <Ionicons name="checkmark-circle" size={14} color={status.ok} />
           <Text style={styles.countText}>{counts.ok} w tempie</Text>
         </View>
         <View style={styles.count}>
-          <Ionicons name="alert-circle" size={15} color="#FDE68A" />
+          <Ionicons name="alert-circle" size={14} color={status.warning} />
           <Text style={styles.countText}>{counts.warn} uwaga</Text>
         </View>
         <View style={styles.count}>
-          <Ionicons name="close-circle" size={15} color="#FECACA" />
+          <Ionicons name="close-circle" size={14} color={status.exceeded} />
           <Text style={styles.countText}>{counts.exceeded} przekroczone</Text>
         </View>
       </View>
@@ -286,41 +360,67 @@ const styles = StyleSheet.create({
   month: { fontSize: 18, fontWeight: '700', color: colors.text },
   sections: { gap: spacing.md },
   summary: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#EFEDFF',
     borderRadius: radius.md,
     padding: spacing.lg,
-    gap: spacing.sm,
+    gap: 6,
+    overflow: 'hidden',
   },
-  summaryLabel: { fontSize: 14, fontWeight: '600', color: '#C7D2FE' },
+  summaryLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: INK_SOFT,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
   summaryValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.primaryText,
+    fontSize: 36,
+    fontWeight: '300',
+    color: INK,
     fontVariant: ['tabular-nums'],
-  },
-  summaryOf: { fontSize: 16, fontWeight: '500', color: '#C7D2FE' },
-  bigTrack: {
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    letterSpacing: -1,
     marginTop: spacing.xs,
-    justifyContent: 'center',
   },
-  bigFill: { height: 10, borderRadius: 5 },
-  paceDot: {
+  summaryOf: { fontSize: 14, color: INK_SOFT, fontVariant: ['tabular-nums'] },
+  bigTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(79,70,229,0.12)',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  within: { height: 6, borderRadius: 3, backgroundColor: colors.primary },
+  over: { height: 6, borderRadius: 3, backgroundColor: status.exceeded, marginLeft: 2 },
+  backdrop: { position: 'absolute', top: 0, left: 0 },
+  limitMark: {
     position: 'absolute',
-    width: 12,
-    height: 12,
-    marginLeft: -6,
-    borderRadius: 6,
-    backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: colors.primaryText,
+    width: 3,
+    height: 18,
+    marginLeft: -1.5,
+    borderRadius: 1.5,
+    backgroundColor: INK,
   },
-  summaryDetail: { fontSize: 14, color: colors.primaryText },
-  counts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.xs },
+  paceMark: {
+    position: 'absolute',
+    width: 2,
+    height: 18,
+    marginLeft: -1,
+    borderRadius: 1,
+    backgroundColor: INK_SOFT,
+    opacity: 0.8,
+  },
+  markLegend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md, rowGap: 4 },
+  markItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  markText: { fontSize: 12, color: INK_SOFT },
+  swatchBar: { width: 14, height: 6, borderRadius: 3 },
+  swatchLimit: { width: 3, height: 12, borderRadius: 1.5, backgroundColor: INK },
+  swatchPace: { width: 2, height: 12, borderRadius: 1, backgroundColor: INK_SOFT },
+  summaryDetail: { fontSize: 14, color: INK, fontVariant: ['tabular-nums'] },
+  counts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: 2 },
   count: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  countText: { fontSize: 13, color: colors.primaryText },
+  countText: { fontSize: 13, color: INK_SOFT },
   card: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -76,7 +76,14 @@ UNUSUAL_THIS_MONTH: list[tuple[int, str, str, str]] = [
     (6, "Elektronika", "1299.00", "nowy telefon"),
 ]
 
-BUDGETS = {"Jedzenie": "1200.00", "Transport": "250.00", "Rozrywka": "300.00", "Zakupy": "400.00"}
+BUDGETS = {
+    "Jedzenie": "3300.00",
+    "Mieszkanie": "2300.00",
+    "Transport": "1200.00",
+    "Zakupy": "1500.00",
+    "Rozrywka": "400.00",
+    "Rachunki": "350.00",
+}
 
 
 def leaf_category(category: str, note: str | None) -> str:
@@ -209,8 +216,8 @@ async def main(email: str, reset: bool) -> None:
         )
         await session.commit()
     print(
-        f"{email}: {len(transactions)} transakcji, {len(BUDGETS)} budżety, "
-        f"{len(rules)} stałych płatności."
+        f"{email}: transakcje {len(transactions)}, budżety {len(BUDGETS)}, "
+        f"stałe płatności {len(rules)}."
     )
 
 
