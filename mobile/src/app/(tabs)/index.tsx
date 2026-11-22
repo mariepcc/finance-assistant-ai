@@ -13,7 +13,7 @@ import {
 
 import { AskAssistant } from '@/components/dashboard/AskAssistant';
 import { BalanceCard } from '@/components/dashboard/BalanceCard';
-import { BudgetMeters } from '@/components/dashboard/BudgetMeters';
+import { BudgetRings } from '@/components/dashboard/BudgetRings';
 import { Card } from '@/components/dashboard/Card';
 import { CategoryDonut } from '@/components/dashboard/CategoryDonut';
 import { SpendingPaceChart } from '@/components/dashboard/SpendingPaceChart';
@@ -130,7 +130,7 @@ export default function DashboardScreen() {
               action={data.budgets.length > 0 ? 'Szczegóły' : undefined}
               onAction={() => router.push('/budgets')}
             >
-              <BudgetMeters budgets={data.budgets} currency={data.currency} />
+              <BudgetRings data={data} />
             </Card>
 
             {data.upcoming.length > 0 ? (
