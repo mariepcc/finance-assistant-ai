@@ -58,7 +58,7 @@ function Ring({
           <Stop offset="1" stopColor={color} />
         </LinearGradient>
       </Defs>
-      <Circle cx={c} cy={c} r={r} stroke={mix(color, 0.86)} strokeWidth={STROKE} fill="none" />
+      <Circle cx={c} cy={c} r={r} stroke={mix(color, 0.78)} strokeWidth={STROKE} fill="none" />
       {filled > 0 ? (
         <Circle
           cx={c}
@@ -123,7 +123,7 @@ export function BudgetRings({ data }: { data: Dashboard }) {
           return (
             <View
               key={b.category_id}
-              style={styles.tile}
+              style={[styles.tile, { backgroundColor: mix(color, 0.93) }]}
               accessible
               accessibilityLabel={`${b.category}: wykorzystano ${formatPct(b.used_pct)} z ${
                 formatMoney(b.limit, currency)
@@ -177,8 +177,15 @@ export function BudgetRings({ data }: { data: Dashboard }) {
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.lg },
-  tile: { width: '50%', alignItems: 'center', gap: 4, paddingHorizontal: spacing.xs },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
+  tile: {
+    width: '48.5%',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+  },
   ringWrap: { width: SIZE, height: SIZE, marginBottom: 2 },
   ringCenter: {
     position: 'absolute',
@@ -205,7 +212,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    backgroundColor: colors.bg,
+    backgroundColor: 'rgba(255,255,255,0.75)',
   },
   pillText: { fontSize: 11, fontWeight: '600', color: colors.text },
   detail: { fontSize: 12, color: colors.text, fontVariant: ['tabular-nums'] },
